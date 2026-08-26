@@ -1170,8 +1170,9 @@ loadRoomModel((progress) => {
       // renderer.compile() only compiles materials for objects that pass
       // frustum culling against the camera passed in — and at this point
       // camera is still sitting at the free-roam start position/orientation
-      // from way earlier (startSeatedIntro hasn't repositioned it yet, see
-      // below). Shirts on the rack, the poster canvases, and the vinyl crate
+      // from way earlier — which is also exactly where the intro now leaves
+      // it (startIntro no longer repositions the camera at all, see below).
+      // Shirts on the rack, the poster canvases, and the vinyl crate
       // aren't necessarily inside that frustum, so they were skipped here
       // and paid their shader-compile/texture-upload cost later, on
       // whichever frame first turned to actually look at them — which is
@@ -1204,8 +1205,8 @@ loadRoomModel((progress) => {
     // preload just below can know what's actually about to be on screen —
     // run this before hiding the loading screen (not after), so there's no
     // gap where the room is visible with the wrong pre-intro camera framing.
-    safeStep("seated intro", () => {
-      if (!tryRestoreViewState()) startSeatedIntro();
+    safeStep("intro", () => {
+      if (!tryRestoreViewState()) startIntro();
     });
 
     // The shader precompile above only forces GPU *program* compilation —
@@ -2263,10 +2264,9 @@ function exitSeatFocus() {
   focusedKind = null;
   setMobileMoveControlsVisible(true);
 
-  // in case WASD/Escape fired before the "get up" button ever opened the
-  // eyelids (menu's shown on the still-closed black screen — see
-  // startSeatedIntro), make sure they're open so standing up doesn't leave
-  // you staring at black; a no-op if openEyesReveal() already ran
+  // defensive: make sure the eyelids are open so standing up can never
+  // leave you staring at black. A no-op if openEyesReveal() already ran,
+  // which on the normal path it has (see startIntro).
   ensureEyesOpen();
 
   const { pos, target, fov } = preFocusCam;
@@ -2501,7 +2501,7 @@ function startObjectTween(obj, toPos, toQuat, duration, onDone) {
 // around for 10 minutes. sessionStorage survives a reload of the SAME tab
 // (it only clears when the tab/window is actually closed), so saving the
 // live camera position there and checking for it before running
-// startSeatedIntro means a reload picks up exactly where you left off
+// startIntro means a reload picks up exactly where you left off
 // instead of restarting. Closing the tab and opening a fresh one still
 // starts the intro from scratch, same as visiting for the first time.
 const VIEW_STATE_KEY = "toefu-room-view-v1";
@@ -2534,7 +2534,7 @@ function saveViewState() {
 }
 
 // Returns true if a saved view was found and restored (caller should skip
-// startSeatedIntro entirely in that case), false if there was nothing to
+// startIntro entirely in that case), false if there was nothing to
 // restore (first visit, a new tab, private browsing, etc.) — normal
 // wake-up intro runs exactly as before.
 function tryRestoreViewState() {
@@ -2567,7 +2567,7 @@ function tryRestoreViewState() {
   document.getElementById("pause-open-btn").classList.add("show");
   // this only ever runs on the "resumed from a reload" path — a fresh
   // visit or new tab has nothing to restore and goes through
-  // startSeatedIntro instead — so this is specifically the "you didn't
+  // startIntro instead — so this is specifically the "you didn't
   // mean to reload, and you're right back where you were" moment.
   showOneShotSubtitle("welcome-back-reload", "Welcome back. Thought I lost you there for a sec. Lol.", 3400);
   return true;
@@ -2575,40 +2575,27 @@ function tryRestoreViewState() {
 
 // ---------------------------------------------------------------- intro / auto wake-up
 // The site starts already seated, no visible tween (the eyelids' default
-// CSS state already fully covers the screen, so the snap into the chair
-// is invisible) — then wakes up on its own after a short beat instead of
-// waiting on a "what do you want to do?" choice. That choice used to
-// split off to a separate flat-portfolio view; the ported Skyrim pause
-// menu (Escape, or the on-screen button once you're up - see js/menu/)
-// is the real navigation now, so there's nothing left to choose here.
-function startSeatedIntro() {
-  if (!modelSeats.length) return; // no chair found in this export — stay in free-roam, nothing to seat into
-
-  // this is the normal free-roam start (camera.position/controls.target/fov
-  // set by the "camera framing" step above) — kept so "get up" has a real
-  // place to tween back out to, via the same exitSeatFocus() the chair's
-  // own click-to-sit uses
-  preFocusCam = { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov };
-
-  const entry = modelSeats[0];
-  hovered = null;
-  controls.enabled = false;
-  canvas.classList.remove("hovering");
-
-  const { pos, target } = computeSeatTransform(entry.group);
-  camera.position.copy(pos);
-  controls.target.copy(target);
-  camera.fov = SEAT_FOV;
-  camera.updateProjectionMatrix();
-  camera.lookAt(target);
-  syncLookAnglesFromTarget();
-
-  focusedSeatIndex = 0;
-  focusedKind = "seat";
-  viewState = "focused";
-
-  // Same beat a person reads "what do you want to do?" and clicks "wake
-  // up" would've taken, minus asking - then the usual blink-and-reveal.
+// CSS state already fully covers the screen) — you simply open your eyes
+// already standing, in the room's normal free-roam framing, and can walk
+// immediately.
+//
+// This used to start you locked into the chair and tween you up to
+// standing on your first WASD press. Both halves of that were a problem:
+// the fixed seated viewpoint read as a strange place to be dropped, and
+// the 1.3s stand-up camera sweep was the single worst-performing moment
+// on the whole site — texture uploads stay lazy on purpose (see the
+// "precompile shaders" step above for why forcing them crashed mobile),
+// so a smooth camera move across the room pays that upload cost spread
+// over every frame of the sweep, as visible stutter. Starting from one
+// settled view pays it once instead.
+//
+// The chair itself is untouched — still clickable to sit down mid-roam
+// (enterSeatFocus/exitSeatFocus), tween and all. This only changes where
+// you begin.
+function startIntro() {
+  // Camera is already at the free-roam start framing set by the "camera
+  // framing" step above, and viewState is already "free" — so there is
+  // deliberately nothing to position or unlock here. Just open the eyes.
   setTimeout(openEyesReveal, 900);
 }
 
@@ -2624,7 +2611,10 @@ function showWakeSubtitles() {
 
   const LINE1_MS = 2900; // first line — trimmed down slightly from the second
   const LINE2_MS = 3200;
-  const GAP_MS = 350; // beat of blank between the two lines
+  const LINE3_MS = 3200;
+  const LINE4_MS = 3600;
+  const GAP_MS = 350; // beat of blank between consecutive lines
+  const LONG_GAP_MS = 2500; // "a few seconds" pause before the last two
 
   // "Toefu:" renders in the dimmer grey (see .wake-name in style.css),
   // the actual dialogue after it stays pure white — same two-tone look
@@ -2639,10 +2629,27 @@ function showWakeSubtitles() {
     setTimeout(() => el.classList.remove("show"), delay);
   }
 
-  showLine("Hey you. You're finally awake.", 300);
-  hideLine(300 + LINE1_MS);
-  showLine("Use WASD to get up and look around", 300 + LINE1_MS + GAP_MS);
-  hideLine(300 + LINE1_MS + GAP_MS + LINE2_MS);
+  let t = 300;
+  showLine("Hey you. You're finally awake.", t);
+  t += LINE1_MS;
+  hideLine(t);
+  t += GAP_MS;
+  showLine("Use WASD to look around", t);
+  t += LINE2_MS;
+  hideLine(t);
+  t += LONG_GAP_MS;
+  showLine("Sorry about the lag give it a second. I'm not from here.", t);
+  t += LINE3_MS;
+  hideLine(t);
+  t += GAP_MS;
+  showLine("I'd come down and say hi, but unfortunately i am tethered to this polygonal form. Sry!", t);
+  t += LINE4_MS;
+  hideLine(t);
+
+  // These last two used to fire on standing up out of the chair. Now that
+  // nothing starts seated they live here, so mark that sequence spent —
+  // otherwise sitting down and standing back up later would replay them.
+  standUpSubtitleShown = true;
 }
 
 // One-shot subtitle for the first successful stand-up (see exitSeatFocus
