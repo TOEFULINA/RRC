@@ -1,0 +1,408 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Archivo:wght@400;600&family=Oswald:wght@500&display=swap');
+
+/* Real Futura Condensed Medium for the wake-up subtitle — Oswald above
+   stays in the font stack as a fallback in case this file ever goes
+   missing, but this is the actual font now. */
+@font-face {
+  font-family: 'Futura Condensed Medium';
+  src: url('fonts/FuturaCondensedMedium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #0d0b10;
+  font-family: 'Archivo', sans-serif;
+  color: #f2ece2;
+  /* Nothing on this page is meant to be copy-selected — it's a 3D scene
+     with UI text laid over it, not a document. Without this, dragging to
+     look around on a touchscreen can catch the subtitle text underneath
+     your finger and pop the native text-selection UI instead of just
+     turning the camera. #wake-subtitle already had its own user-select:none,
+     but that alone wasn't enough on every mobile browser — setting it here
+     on html/body closes the gap site-wide. */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  display: block;
+  outline: none;
+  cursor: grab;
+  /* Without this, a tap/drag on the canvas can get read by the browser as
+     a pull-to-refresh or pinch-zoom gesture instead of our own click/drag
+     handling — on mobile that was reloading the whole page the instant you
+     tapped a canvas. The mobile control buttons already had this; the main
+     scene canvas itself never did. */
+  touch-action: none;
+}
+#scene:active { cursor: grabbing; }
+#scene.hovering { cursor: pointer; }
+
+/* ---------- loading screen ---------- */
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .6s ease;
+}
+#loading-screen.hidden { opacity: 0; pointer-events: none; }
+.loading-inner { text-align: center; }
+.loading-title {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f2ece2;
+}
+.loading-sub {
+  margin-top: 12px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: .04em;
+  opacity: .5;
+  font-size: .8rem;
+}
+
+/* ---------- intro overlay (start menu) ---------- */
+#intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  transition: opacity .4s ease, visibility .4s ease;
+}
+#intro-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.menu-question {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f2ece2;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.menu-options {
+  display: flex;
+  gap: 52px;
+}
+
+.menu-option {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: .9rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  color: #f2ece2;
+  opacity: .7;
+  cursor: pointer;
+  padding: 6px 2px;
+  transition: opacity .15s ease, border-color .15s ease;
+}
+.menu-option:hover { opacity: 1; border-bottom-color: #ffce6b; }
+
+.menu-note {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: .78rem;
+  letter-spacing: .04em;
+  color: #f2ece2;
+  opacity: .5;
+  transition: opacity .3s ease;
+}
+.menu-note.hidden { opacity: 0; }
+
+/* ---------- eyelids ----------
+   Two solid black planes that fully cover the screen (meeting edge to
+   edge). The camera snaps into the chair while they're still shut, and the
+   "flat portfolio" / "get up" menu comes up right on top of this same
+   black screen. Only once "get up" is clicked do they blink a few times (a
+   quick partial parting via .blink, using this fast default transition)
+   before the real reveal — at which point .slow-open swaps in the long
+   cinematic transition below and .open takes them all the way, uncovering
+   the seated view underneath. */
+#eyelid-top, #eyelid-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 50vh;
+  background: #000;
+  z-index: 40;
+  transition: transform 0.22s ease;
+}
+#eyelid-top.slow-open, #eyelid-bottom.slow-open {
+  transition: transform 1.2s cubic-bezier(0.65, 0, 0.35, 1);
+}
+#eyelid-top { top: 0; transform: translateY(0); }
+#eyelid-bottom { bottom: 0; transform: translateY(0); }
+#eyelid-top.blink { transform: translateY(-22%); }
+#eyelid-bottom.blink { transform: translateY(22%); }
+#eyelid-top.open { transform: translateY(-100%); }
+#eyelid-bottom.open { transform: translateY(100%); }
+#eyelid-top.done, #eyelid-bottom.done { pointer-events: none; }
+
+/* ---------- wake-up subtitle (Skyrim-style, grey Futura-Condensed-ish) ---------- */
+/* Oswald is the free stand-in for Futura Condensed Medium (that exact
+   commercial font isn't available on a web font CDN) — same geometric,
+   condensed, medium-weight look the reference style is going for. Shown
+   once, right as the eyelids finish opening (see showWakeSubtitles in
+   main.js), never replayed on repeat sit-downs. */
+#wake-subtitle {
+  position: fixed;
+  left: 50%;
+  bottom: 9%;
+  transform: translateX(-50%);
+  z-index: 42;
+  font-family: 'Futura Condensed Medium', 'Oswald', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 500;
+  font-size: 1.4rem;
+  letter-spacing: .015em;
+  color: #ffffff;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.48), 0 0 14px rgba(0,0,0,0.33);
+  text-align: center;
+  opacity: 0;
+  transition: opacity .5s ease;
+  pointer-events: none;
+  max-width: 92vw;
+  padding: 0 16px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* iOS long-press menu (Copy/Look Up) on the text itself */
+}
+#wake-subtitle.show { opacity: 1; }
+#wake-subtitle .wake-name { color: #9a9a9a; }
+
+/* Every subtitle line (wake-up, stand-up, posters, vinyl, shirts) renders
+   through this one element/rule, so this single breakpoint keeps them all
+   at the exact same scaled-down size on phones — same timing as desktop,
+   just smaller and narrower so long lines wrap instead of overflowing. */
+@media (max-width: 700px) {
+  #wake-subtitle {
+    /* Full-width bar flush against the true bottom edge instead of a
+       floating centered line — reads like a real subtitle track instead
+       of text just sitting in the middle of the screen. The d-pad
+       (#mobile-controls below) is pushed up just enough to clear this
+       bar's height instead of guessing a fixed gap. */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    background: linear-gradient(to top, rgba(8,6,10,0.62), rgba(8,6,10,0));
+    font-size: 1.05rem;
+    padding: 16px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+}
+
+/* ---------- on-screen mobile move buttons ---------- */
+/* Hidden by default (and on any device with a real mouse/trackpad — the
+   "hover: none, pointer: coarse" pair below is the standard way to detect
+   touch-primary screens) so desktop players never see a d-pad they don't
+   need. Laid out as a 3x3 grid so w/a/s/d land in their natural compass
+   positions without hand-placing four separate offsets. */
+#mobile-controls {
+  position: fixed;
+  left: 18px;
+  /* Nudged down a bit from 90px — the subtitle bar underneath is now its
+     own full-width band (see #wake-subtitle's mobile breakpoint) with a
+     predictable height, so the d-pad can sit closer to it without
+     overlapping instead of leaving a big gap. */
+  bottom: 68px;
+  z-index: 20;
+  display: none;
+  grid-template-columns: repeat(3, 42px);
+  grid-template-rows: repeat(3, 42px);
+  gap: 6px;
+  opacity: 0;
+  transition: opacity .6s ease 1s;
+  pointer-events: none;
+  touch-action: none;
+}
+#mobile-controls.show { opacity: .85; pointer-events: auto; }
+@media (hover: none) and (pointer: coarse) {
+  #mobile-controls { display: grid; }
+}
+.mc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,8,13,0.55);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  color: #f2ece2;
+  font-size: 0.9rem;
+  line-height: 1;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.mc-btn:active { background: rgba(255,206,107,0.3); }
+.mc-w { grid-column: 2; grid-row: 1; }
+.mc-a { grid-column: 1; grid-row: 2; }
+.mc-s { grid-column: 2; grid-row: 2; }
+.mc-d { grid-column: 3; grid-row: 2; }
+
+/* ---------- on-screen mobile prev/next (vinyl crate, closet rack) ---------- */
+/* Same touch-only gating as #mobile-controls above, but shown/hidden by JS
+   (via the .show class) rather than always-on — only makes sense while
+   you're actually focused on something browsable. */
+#mobile-cycle-controls {
+  position: fixed;
+  right: 18px;
+  /* matches #mobile-controls' new bottom offset, so both button clusters
+     sit at the same height above the full-width subtitle bar */
+  bottom: 68px;
+  z-index: 20;
+  display: none;
+  gap: 14px;
+  opacity: 0;
+  transition: opacity .25s ease;
+  pointer-events: none;
+  touch-action: none;
+}
+#mobile-cycle-controls.show { opacity: .85; pointer-events: auto; }
+@media (hover: none) and (pointer: coarse) {
+  #mobile-cycle-controls { display: flex; }
+}
+.mc-cycle-btn {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,8,13,0.55);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  color: #f2ece2;
+  font-size: 1.8rem;
+  line-height: 1;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.mc-cycle-btn:active { background: rgba(255,206,107,0.3); }
+
+/* ---------- lightbox ---------- */
+#lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .3s ease, visibility .3s ease;
+}
+#lightbox.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+#lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8,6,10,0.82);
+  backdrop-filter: blur(4px);
+}
+#lightbox-card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  max-width: 90vw;
+  max-height: 86vh;
+  padding: 20px;
+}
+#lightbox-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1520;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  padding: 14px;
+}
+#lightbox-canvas {
+  width: min(52vw, 420px);
+  height: min(52vw, 420px);
+  border-radius: 4px;
+  display: block;
+}
+#lightbox-info {
+  width: 260px;
+  text-align: left;
+}
+#lightbox-kicker {
+  font-size: .72rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #ffce6b;
+  margin-bottom: 6px;
+  opacity: .9;
+}
+#lightbox-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.4rem;
+  margin: 0 0 10px;
+}
+#lightbox-desc {
+  font-size: .88rem;
+  line-height: 1.55;
+  opacity: .75;
+  margin: 0;
+}
+#lightbox-close, #lightbox-prev, #lightbox-next {
+  position: absolute;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #f2ece2;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.4rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s ease;
+}
+#lightbox-close:hover, #lightbox-prev:hover, #lightbox-next:hover {
+  background: rgba(255,206,107,0.25);
+}
+#lightbox-close { top: -6px; right: -6px; }
+#lightbox-prev { left: -50px; top: 50%; transform: translateY(-50%); }
+#lightbox-next { right: -50px; top: 50%; transform: translateY(-50%); }
+
+@media (max-width: 720px) {
+  #lightbox-card { flex-direction: column; max-height: 92vh; overflow-y: auto; }
+  #lightbox-canvas { width: min(80vw, 320px); height: min(80vw, 320px); }
+  #lightbox-info { width: min(80vw, 320px); text-align: center; }
+  #lightbox-prev { left: 6px; }
+  #lightbox-next { right: 6px; }
+}

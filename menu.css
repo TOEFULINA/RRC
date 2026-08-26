@@ -1,0 +1,1178 @@
+@font-face {
+  font-family: "Futura Condensed";
+  src: url("/menu/fonts/Futura Condensed Light.ttf") format("truetype");
+  font-weight: 300;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Futura Condensed";
+  src: url("/menu/fonts/Futura Condensed Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Futura Condensed";
+  src: url("/menu/fonts/Futura Condensed Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --ink: #eee7d6;
+  --ink-dim: #b9b096;
+  --line: rgba(238, 231, 214, 0.55);
+  --panel: rgba(8, 8, 6, 0.6);
+  /* neutral gray, sampled from the actual UI art (the l-/r-slim/wide
+     panel assets) rather than invented — those assets are pure
+     grayscale, no gold/amber anywhere in them */
+  --panel-border: rgba(160, 160, 160, 0.4);
+  color-scheme: dark;
+}
+
+/* Everything below, through the matching close near the html/body
+   rule, is scoped to #pause-menu-root so these resets do not leak
+   onto the room page around it. */
+@scope (#pause-menu-root) {
+
+* {
+  box-sizing: border-box;
+}
+
+/* Buttons don't inherit the page font by default in browsers — without
+   this, anything rendered as a <button> (like the item-list rows) quietly
+   falls back to the system UI font instead of Futura Condensed. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+} /* end @scope (#pause-menu-root) part 1 */
+
+/* Was `html, body { ... }` in the standalone compass site - rewritten
+   to target #pause-menu-root directly now that this stylesheet shares
+   the page with the room scene (applying page-root styling to the real
+   html/body would leak the menu look onto the room). Left as a plain
+   global rule rather than inside @scope, because @scope excludes its
+   own scoping root from matching plain selectors in its block, and
+   this needs to style the root element itself. Safe to leave global:
+   it is a single unique-ID selector, nothing else can match it. */
+#pause-menu-root {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  color: var(--ink);
+  font-family: "Futura Condensed", "Bahnschrift", "Arial Narrow", sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+  cursor: url("/menu/cursors/logo-default.png") 0 0, auto;
+}
+
+@scope (#pause-menu-root) {
+
+a,
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+label[for],
+.item-viewer canvas {
+  cursor: url("/menu/cursors/logo-pointer.png") 0 0, pointer;
+}
+
+#app {
+  position: relative;
+  min-height: 100vh;
+  z-index: 2;
+}
+
+/* ---------- persistent blurred background ---------- */
+
+#bg-layer {
+  position: fixed;
+  inset: -3vh -3vw;
+  background-image: var(--bg-image, none);
+  background-size: cover;
+  background-position: center 25%;
+  filter: blur(3px);
+  transform: scale(1.02);
+  z-index: 0;
+  /* soft fallback so the page never looks broken before an image is set */
+  background-color: #14120f;
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(80, 70, 50, 0.35), transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(30, 40, 35, 0.4), transparent 60%),
+    var(--bg-image, none);
+}
+/* Skills only: the backdrop is a wide panorama that pans as you rotate
+   through the ring (see updateBgPan in skillsView.js) — this transition
+   is what makes that pan glide instead of snapping. Zoomed in well past
+   the plain "cover" size (which barely has any excess width to pan
+   across) so 0%->100% travels a long, clearly-visible distance instead
+   of a subtle nudge — matching how far the constellations themselves
+   move node-to-node. */
+#bg-layer.bg-panning {
+  /* Same duration/curve as .skill-node's own transition (see below) — the
+     backdrop now moves in lockstep with the icons' heavy, decelerating
+     swing instead of drifting on its own lighter timing. */
+  transition: background-position 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  background-size: 320% auto;
+  /* Crisp, not the moody blurred treatment every other screen's shared
+     backdrop gets — this is meant to read as an actual scene, not an
+     ambient wash behind a panel. Regular brightness, no dark overlay. */
+  filter: saturate(1.05);
+  /* Held back and revealed slowly instead of swapping in instantly on
+     navigation — the scene shouldn't be visible before the constellation
+     itself is. Delayed to start around when .skills-carousel's own
+     entrance breaks through (see skills-descend), then a slow zoom-and-
+     fade settle so the backdrop arrives with the same weight as the
+     icon, not ahead of it. */
+  animation: skills-bg-reveal 2s ease-out both;
+  animation-delay: 0.75s;
+}
+@keyframes skills-bg-reveal {
+  from {
+    opacity: 0;
+    transform: scale(1.16);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+#bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+/* ---------- shared type ---------- */
+
+.rune {
+  font-family: "Futura Condensed", "Bahnschrift", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ---------- compass home ---------- */
+
+.compass-screen {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compass {
+  position: relative;
+  width: min(46vw, 720px);
+  /* matches the compass-rose.png artwork's own proportions so the star
+     tips land exactly at this box's edges */
+  aspect-ratio: 3863 / 1791;
+  /* how far each label sits clear of the star tip — see .compass-point
+     below. A custom property (inherited by the buttons) rather than a
+     percentage of this box, so it can't drift if the box's own sizing
+     ever changes. */
+  --gap: clamp(2.25rem, 5vw, 4.5rem);
+}
+
+.compass-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.92;
+  /* compass-rose.png is pure grayscale art — no sepia/saturate warming,
+     just a soft glow, so it renders the way the source image actually
+     looks instead of an invented warmer tint */
+  filter: drop-shadow(0 0 14px rgba(238, 231, 214, 0.3));
+  pointer-events: none;
+  user-select: none;
+}
+
+.compass-point {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4em;
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  font-weight: 300;
+  font-size: clamp(1.15rem, 2.2vw, 1.7rem);
+  padding: 0.75em;
+  transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+.compass-point:hover,
+.compass-point:focus-visible {
+  color: var(--ink);
+  text-shadow: 0 0 16px rgba(238, 231, 214, 0.75);
+  outline: none;
+}
+
+/* Rewritten from a percentage-based top/bottom/left/right offset (which
+   depends on the .compass box's own size — itself set via aspect-ratio —
+   and reportedly wasn't rendering consistently for every viewer) to a
+   translate-based anchor instead: each label is pinned at the exact edge
+   of the box (top:0 / bottom:0 / left:0 / right:0 — the same edge the
+   star tips touch, per compass-rose.png's own proportions) and then
+   pushed clear of that edge with `transform: translate(...)`. The first
+   100% moves the label fully past its own edge (so it can never sit on
+   top of the tip no matter how the box is sized), and the clamp() on top
+   of that is the actual visible gap — sizeable and screen-size-aware, but
+   a fixed value rather than a percentage of the compass box. */
+.compass-point.top {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, calc(-100% - var(--gap)));
+}
+.compass-point.bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, calc(100% + var(--gap)));
+}
+.compass-point.left {
+  left: 0;
+  top: 50%;
+  transform: translate(calc(-100% - var(--gap)), -50%);
+  flex-direction: column;
+}
+.compass-point.right {
+  right: 0;
+  top: 50%;
+  transform: translate(calc(100% + var(--gap)), -50%);
+}
+
+.hint {
+  position: absolute;
+  bottom: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+  opacity: 0.6;
+}
+
+/* Only rendered when the visitor arrived via a link from toefulina.com
+   (see src/utils/referrer.js) — a plain text affordance back to that site,
+   tucked in the corner so it doesn't compete with the compass itself. */
+.back-link {
+  position: absolute;
+  top: 4vh;
+  left: 4vw;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  opacity: 0.6;
+  padding: 0.5em 0.25em;
+  transition: color 0.25s ease, opacity 0.25s ease, text-shadow 0.25s ease;
+}
+.back-link:hover,
+.back-link:focus-visible {
+  color: var(--ink);
+  opacity: 1;
+  text-shadow: 0 0 16px rgba(238, 231, 214, 0.75);
+  outline: none;
+}
+
+/* ---------- section views ---------- */
+
+.section-screen {
+  min-height: 100vh;
+  /* extra bottom padding to clear the nav bar, now fixed at the bottom of
+     the screen instead of the top */
+  padding: 4rem 6vw 6.5rem;
+}
+/* The fade-in lives on this inner wrapper rather than .section-screen
+   itself: a `transform` (even one an animation leaves behind at rest via
+   fill-mode) turns its element into the containing block for any
+   position:fixed descendant. .top-nav is a fixed-position sibling of this
+   wrapper — if the animation sat on .section-screen instead, the nav
+   would anchor to that (possibly page-length) box instead of the actual
+   viewport, and drift off-screen on any page taller than 100vh. */
+.section-content {
+  animation: fade-in 0.4s ease both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* A full-width strip pinned to the bottom edge — "Bottom Bar Thin.png"
+   (a flat translucent panel with a hairline top border) stretched
+   edge-to-edge, the same background-image + 100% 100% pattern used
+   elsewhere, but here deliberately stretched rather than aspect-ratio
+   boxed since the source art is just a plain panel with no detail to
+   distort. Nav content is left-anchored (tabs); the right side carries
+   the live clock readout (see .nav-clock below). The art's own hairline
+   top border gets scaled down to nothing at this bar height, so it's
+   redrawn explicitly as a low-opacity border-top — the same faint rule
+   used on every other panel. */
+.top-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: clamp(44px, 6.5vw, 70px);
+  padding: 0 clamp(1.5rem, 4vw, 3rem);
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  background-image: url("/menu/ui/nav-bar-full.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border-top: 1px solid var(--panel-border);
+}
+
+/* Bottom-right game-clock readout, mirroring the in-game date/time
+   overlay from the reference screenshots (e.g. "Fredas, 12:20 PM, 30th
+   of Heartfire, 4E 201") — pushed to the far right of the bar via
+   margin-left: auto, using the same dim/uppercase treatment as the
+   other nav labels. */
+.nav-clock {
+  margin-left: auto;
+  color: var(--ink-dim);
+  font-size: clamp(0.6rem, 1.2vw, 0.8rem);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.top-nav button {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  font-size: clamp(0.65rem, 1.3vw, 0.85rem);
+  letter-spacing: 0.16em;
+  padding: 0.3em 0;
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.top-nav button:hover {
+  color: var(--ink);
+}
+.top-nav button.active {
+  color: var(--ink);
+  border-bottom-color: var(--panel-border);
+}
+.top-nav .home-glyph {
+  color: var(--ink);
+  font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+  opacity: 0.8;
+  border-bottom: none;
+}
+.top-nav .home-glyph:hover {
+  opacity: 1;
+}
+
+.section-title {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin: 0 0 0.3em;
+}
+.section-sub {
+  color: var(--ink-dim);
+  margin: 0 0 2.5rem;
+  max-width: 60ch;
+  font-weight: 300;
+}
+
+/* ---------- panels ---------- */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(3px);
+}
+
+/* ---------- items: category rail -> item list -> model/stat card ---------- */
+/* Full-screen, like the rest of the game's menus — not a boxed-in panel. */
+
+.items-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+}
+
+/* The rows list scrolls under a glyph that never moves — like the game's
+   own list: the highlighted row is kept centered on the fixed arrow by
+   translating the row stack itself (see centerActiveRow in itemsView.js),
+   not by moving the arrow to chase the selection. */
+.category-rows-viewport {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+.category-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: transform 0.2s ease;
+}
+
+/* The panel frame (border lines + the connector glyph) is baked directly
+   into these png assets — the "-selected" variant is the same panel with
+   the glyph visible, used while that pane has focus. That replaces what
+   used to be a hand-rolled gradient/border here plus a separate glyph
+   image element floating on top of it. */
+.category-col {
+  position: relative;
+  /* Fluid instead of a fixed 220px + a breakpoint that restructures the
+     layout — this converges to the old 220px on wide screens and shrinks
+     smoothly down to a condensed rail on narrow ones, so mobile gets the
+     exact same side-by-side layout as desktop, just scaled down. */
+  width: clamp(72px, 19vw, 220px);
+  flex-shrink: 0;
+  height: 100%;
+  padding: 0 clamp(0.3rem, 2vw, 1rem);
+  background-image: url("/menu/ui/l-slim.png");
+  background-size: 100% 100%;
+}
+.category-col.focused {
+  background-image: url("/menu/ui/l-slim-selected.png");
+}
+
+.list-col {
+  position: relative;
+  width: clamp(96px, 26vw, 340px);
+  flex-shrink: 0;
+  height: 100%;
+  background-image: url("/menu/ui/l-wide.png");
+  background-size: 100% 100%;
+  transition: opacity 0.25s ease;
+}
+.list-col.focused {
+  background-image: url("/menu/ui/l-wide-selected.png");
+}
+
+/* Only the category rail shows at first; the list + detail panes fade in
+   once you've stepped right into them, and fade back out stepping back
+   left — kept as opacity only (not width) so the layout never reflows. */
+.items-fullscreen:not(.expanded) .list-col,
+.items-fullscreen:not(.expanded) .detail-col {
+  opacity: 0;
+  pointer-events: none;
+}
+.list-rows-viewport {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+.list-col-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0 clamp(0.4rem, 2vw, 1rem);
+  transition: transform 0.2s ease;
+}
+
+.col-row {
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--ink-dim);
+  font-weight: 500;
+  font-size: clamp(0.6rem, 2.3vw, 0.95rem);
+  letter-spacing: 0.02em;
+  padding: 0.5em 0.7em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s ease;
+}
+.col-row:hover {
+  color: var(--ink);
+}
+.col-row.active {
+  color: var(--ink);
+}
+.category-col .col-row {
+  font-size: clamp(0.64rem, 2.6vw, 1rem);
+}
+
+.detail-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: clamp(0.75rem, 3vw, 1.5rem);
+  /* extra bottom padding to clear the nav bar, now fixed at the bottom of
+     the screen instead of the top */
+  padding: clamp(1.5rem, 6vw, 4rem) 3vw clamp(3.5rem, 9vw, 6rem);
+  transition: opacity 0.25s ease, gap 0.35s ease;
+}
+/* Click-to-expand mode (see modelViewer.js's onExpandChange /
+   itemsView.js's setExpanded): the info card collapses away and the
+   viewer grows to fill the space it leaves — see the two rules below. */
+.detail-col.viewer-expanded {
+  gap: 0;
+}
+
+.item-viewer {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 160px;
+  /* Was capped at 55% of the detail column, which — combined with the
+     info card and its own gap eating space below — left the actual
+     render surface small even once the model itself was framed tightly
+     inside it. Raised so the viewer itself claims most of the column. */
+  max-height: 76%;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.06), transparent 70%);
+  transition: max-height 0.35s ease;
+}
+.detail-col.viewer-expanded .item-viewer {
+  max-height: 100%;
+}
+.item-viewer canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.item-viewer .viewer-hint {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  font-size: 0.7rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.08em;
+}
+
+.info-card {
+  width: min(500px, 94%);
+  flex-shrink: 0;
+  align-self: center;
+  aspect-ratio: 4279 / 1847;
+  background-image: url("/menu/ui/info-card-wide.png");
+  background-size: 100% 100%;
+  /* Comfortably above the tallest this box ever renders at (~216px at its
+     max 500px width) so it never clips in the normal state — only used as
+     the collapse target below. */
+  max-height: 280px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+.detail-col.viewer-expanded .info-card {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.info-card-inner {
+  height: 100%;
+  padding: 7% 8%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.45rem;
+  overflow: hidden;
+}
+.info-name {
+  font-size: clamp(0.85rem, 2.1vw, 1.4rem);
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: -0.02em;
+  /* Always one line — fitTextToOneLine() shrinks font-size (and, as a
+     last resort, letter-spacing) at render time so long names fit here
+     instead of wrapping. */
+  white-space: nowrap;
+  overflow: hidden;
+}
+.info-divider {
+  height: 1px;
+  background: var(--panel-border);
+  opacity: 0.7;
+  margin: 0.25rem 0 0.4rem;
+}
+.info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow: auto;
+}
+/* Stat row: label + value sit inline on the same baseline (not stacked),
+   centered as a row to match the title and description above/below it. */
+.stat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem clamp(1rem, 4.5vw, 2.5rem);
+}
+.stat-list li {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.35em;
+}
+.stat-label {
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  font-size: clamp(0.56rem, 2vw, 0.72rem);
+  letter-spacing: 0.08em;
+}
+.stat-list li span:last-child {
+  font-weight: 700;
+  font-size: clamp(0.9rem, 3.2vw, 1.3rem);
+  color: var(--ink);
+}
+/* Description sits centered beneath the (left-aligned) stat row, same as
+   the reference tooltip — no divider above it, one line across the box. */
+.item-description {
+  font-size: clamp(0.62rem, 2.1vw, 0.8rem);
+  line-height: 1.4;
+  color: var(--ink-dim);
+  font-weight: 400;
+  text-align: center;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- items: local-only stat/description editor ---------- */
+/* No backend behind this site, so there's nowhere shared to save an
+   edit — instead, edit mode (toggled with the E key, see itemsView.js)
+   makes each stat value and the description directly typeable, and
+   what you type is saved to your own browser's localStorage and shown
+   back to you from then on. The bar below surfaces that state and lets
+   you copy everything you've changed as text to hand back over chat. */
+.stat-value-edit,
+.item-description[contenteditable] {
+  cursor: text;
+  border-radius: 3px;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(238, 231, 214, 0.3);
+  background: rgba(238, 231, 214, 0.06);
+  padding: 0 0.25em;
+  margin: 0 -0.25em;
+}
+.stat-value-edit:focus,
+.item-description[contenteditable]:focus {
+  box-shadow: 0 0 0 1px rgba(238, 231, 214, 0.7);
+  background: rgba(238, 231, 214, 0.12);
+}
+/* While actively editing, let the description breathe onto more than one
+   line rather than staying clipped to the single-line ellipsis it uses
+   for normal display — you need to be able to see what you're typing. */
+.item-description[contenteditable] {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.edit-mode-bar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(20, 16, 10, 0.92);
+  border-bottom: 1px solid rgba(212, 175, 100, 0.5);
+  font-size: clamp(0.6rem, 1.4vw, 0.75rem);
+  letter-spacing: 0.06em;
+}
+.items-fullscreen.edit-mode-active .edit-mode-bar {
+  display: flex;
+  flex-wrap: wrap;
+}
+.edit-mode-label {
+  color: #d4af64;
+  text-transform: uppercase;
+}
+.edit-copy-btn,
+.edit-clear-btn {
+  background: none;
+  border: 1px solid rgba(238, 231, 214, 0.4);
+  color: var(--ink);
+  padding: 0.25em 0.9em;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.edit-copy-btn:hover,
+.edit-clear-btn:hover {
+  background: rgba(238, 231, 214, 0.12);
+  border-color: rgba(238, 231, 214, 0.7);
+}
+
+/* ---------- magic: same menu mechanic as items, mirrored to the right ---------- */
+/* Items opens from the compass's right point and grows rightward (rail on
+   the left, using the l-*.png panel art). Magic opens from the left
+   point, so the whole thing is flipped: rail hugs the right edge, the
+   list/detail panes grow toward the left, and it uses the r-*.png panel
+   art instead — a pre-made mirror of the same art, glyph pointing the
+   other way, rather than CSS-flipping the l- assets — everything else
+   (carousel centering, focus/expand behavior) is shared, unchanged, from
+   the items menu. */
+.items-fullscreen.mirrored {
+  flex-direction: row-reverse;
+}
+.items-fullscreen.mirrored .category-col {
+  /* wider than Items' category rail — this rail carries the actual
+     portfolio-type names (e.g. "Graphic Design"), not short category
+     labels, so it needs the room */
+  width: clamp(82px, 22vw, 300px);
+  background-image: url("/menu/ui/r-slim.png");
+}
+.items-fullscreen.mirrored .category-col.focused {
+  background-image: url("/menu/ui/r-slim-selected.png");
+}
+.items-fullscreen.mirrored .list-col {
+  background-image: url("/menu/ui/r-wide.png");
+}
+.items-fullscreen.mirrored .list-col.focused {
+  background-image: url("/menu/ui/r-wide-selected.png");
+}
+.items-fullscreen.mirrored .col-row {
+  text-align: right;
+}
+
+/* Real artwork/video in the Magic detail pane, in place of Items' 3D
+   viewer — same .item-viewer box (sizing/position untouched), just filled
+   with an image or video instead of a canvas. */
+.item-viewer .magic-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* "All" — a condensed gallery of every piece in the current list, shown in
+   the detail pane in place of a single item. Selecting a thumbnail opens
+   that piece normally, same as picking it from the list. */
+.detail-col.gallery-mode {
+  justify-content: flex-start;
+}
+.gallery-heading {
+  flex-shrink: 0;
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  letter-spacing: 0.04em;
+}
+.gallery-heading .gallery-count {
+  color: var(--ink-dim);
+  font-weight: 400;
+  font-size: 0.8em;
+  margin-left: 0.5em;
+}
+/* Collage layout — a CSS multi-column flow rather than a grid, so each
+   piece keeps its own source image's proportions (a tall sketch, a wide
+   render, a square icon) instead of every tile being cropped to a
+   uniform square. Columns lay out top-to-bottom then wrap, which is what
+   gives it the scattered collage feel rather than a strict row grid. */
+.gallery-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  columns: 160px 4;
+  column-gap: 0.4rem;
+  padding-right: 0.25rem;
+}
+.gallery-thumb {
+  /* No border/frame — just the images butted together, so it reads as one
+     collage instead of a grid of bordered tiles. This is a <button>, so
+     border/background also have to be stripped explicitly — otherwise
+     the browser's own default button chrome (a raised outset border)
+     shows up in place of the border we removed. */
+  position: relative;
+  display: block;
+  width: 100%;
+  break-inside: avoid;
+  margin: 0 0 0.4rem;
+  border: none;
+  background: none;
+  padding: 0;
+  transition: filter 0.2s ease;
+  filter: brightness(0.85);
+}
+.gallery-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.gallery-thumb:hover,
+.gallery-thumb:focus-visible {
+  filter: brightness(1.05);
+  outline: none;
+}
+.gallery-thumb[data-kind="video"]::after {
+  content: "\25B6";
+  position: absolute;
+  bottom: 0.4em;
+  right: 0.5em;
+  color: var(--ink);
+  font-size: 0.8rem;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+}
+
+@media (max-width: 860px) {
+  .gallery-grid {
+    columns: 110px 3;
+    column-gap: 0.3rem;
+  }
+  .gallery-thumb {
+    margin-bottom: 0.3rem;
+  }
+}
+
+/* Mobile only: a portrait phone screen crops a landscape backdrop down to
+   a narrow sliver at the default near-1x scale, so the scene reads as
+   mostly empty space around the edges. Zoomed in hard here so the subject
+   actually fills the frame — this stacks on top of #bg-layer's own
+   transform (and the skills view's panning transition, which doesn't set
+   its own transform and so inherits this too). */
+@media (max-width: 860px) {
+  #bg-layer {
+    /* background-size: cover on a tall portrait screen fits a wide scene
+       width-for-width, leaving it cropped top/bottom — anchoring the zoom
+       low pulls the frame down toward the shelving/racks instead of the
+       ceiling. */
+    transform: scale(1.8);
+    transform-origin: 50% 60%;
+  }
+}
+
+/* Mobile only: tapping the 3D model already collapses the info card (see
+   .detail-col.viewer-expanded above) — on a phone that still leaves the
+   category rail, item list, and bottom nav visible, eating a big chunk of
+   the screen. .model-fullscreen (toggled alongside .viewer-expanded, see
+   setExpanded in itemsView.js) hides all three so the model actually
+   fills the whole screen; tapping again restores everything exactly as
+   it was. Desktop has room for both already, so this stays scoped to the
+   narrow breakpoint. */
+@media (max-width: 860px) {
+  .items-fullscreen.model-fullscreen .category-col,
+  .items-fullscreen.model-fullscreen .list-col,
+  .items-fullscreen.model-fullscreen .top-nav {
+    display: none;
+  }
+  .items-fullscreen.model-fullscreen .detail-col {
+    padding: 0;
+  }
+}
+
+/* Mobile only: .info-card's aspect-ratio (locked to the wide banner art's
+   own shape) is what keeps it short-and-wide on desktop — but on a narrow
+   phone screen, the same aspect-ratio against a much narrower box works
+   out to a much SHORTER box too, too short to fit a 3-stat row plus a
+   description without clipping (the card clips its own overflow). There's
+   no separate taller art asset, so instead the aspect-ratio is dropped
+   here and the card is allowed to grow to whatever height its content
+   actually needs — the background art stretches to match (a mild, mostly
+   unnoticeable stretch of the corner motif) rather than the text getting
+   cut off. .item-viewer above it is a flexible flex child, so it simply
+   yields the extra space rather than anything overlapping or scrolling. */
+@media (max-width: 860px) {
+  .info-card {
+    aspect-ratio: unset;
+    height: auto;
+    max-height: none;
+  }
+  .info-card-inner {
+    height: auto;
+    padding: 6% 7%;
+  }
+}
+
+/* ---------- skills: constellation carousel ---------- */
+/* Full-screen, like items/magic — a character-stat-style bar on top (see
+   renderStatsBar in skillsView.js for why it shows different fields than
+   the game's own Name/Level/Race), the constellation ring in the middle,
+   the same bottom nav every screen uses underneath, untouched. */
+
+.skills-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Placeholder backdrop for while SKILLS_BACKGROUND_IMAGE (config.js) is
+   still unset — a plain dark starfield rather than showing the site's
+   default (non-space) background underneath this screen. Swap in a real
+   nebula/space image and this class stops being applied entirely. */
+.skills-fullscreen.skills-fallback-bg {
+  background: radial-gradient(ellipse at 30% 20%, rgba(60, 40, 90, 0.55), transparent 55%),
+    radial-gradient(ellipse at 75% 70%, rgba(20, 50, 70, 0.5), transparent 55%), #05050a;
+}
+.skills-fullscreen.skills-fallback-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  /* A handful of repeating soft dots at different sizes/opacities reads as
+     a loose starfield without needing an actual image asset. */
+  background-image: radial-gradient(1.5px 1.5px at 10% 20%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 25% 65%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 40% 15%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 55% 80%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 70% 35%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(1px 1px at 85% 60%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 92% 25%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(1px 1px at 15% 90%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 60% 55%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 35% 40%, rgba(255, 255, 255, 0.55), transparent);
+  background-repeat: no-repeat;
+}
+
+.skills-stats-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.5rem, 5vw, 4rem);
+  padding: clamp(1.25rem, 4vw, 2rem) 2vw 0.5rem;
+  animation: fade-in 0.7s ease both;
+}
+.stats-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3em;
+  min-width: 6em;
+}
+.stats-label {
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  font-size: clamp(0.55rem, 1.6vw, 0.68rem);
+  letter-spacing: 0.14em;
+}
+.stats-value {
+  font-family: "Futura Condensed", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: clamp(0.85rem, 2.4vw, 1.15rem);
+}
+.stats-discipline {
+  min-height: 1.2em; /* keeps the bar's height steady while this field's text changes on rotate */
+}
+.stats-progress {
+  width: clamp(70px, 12vw, 130px);
+  height: 3px;
+  background: var(--panel-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.stats-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(238, 231, 214, 0.5), var(--ink));
+  transition: width 0.35s ease;
+}
+
+.skills-carousel {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* extra bottom padding to clear the fixed bottom nav */
+  padding-bottom: clamp(3.5rem, 9vw, 6rem);
+  /* Enters like the reference menu — the constellation ring descending
+     down from off-screen and settling into place, instead of just
+     appearing. Runs once on mount (a fresh element every time the route
+     is entered, since main.js fully re-renders the view on navigation),
+     so this replays every time you step into Skills. Deliberately long
+     and staged rather than one smooth ease: a slow, straining push down
+     (like it's pressing against something) that suddenly breaks through
+     partway in — a fast plunge past its resting point — then a couple of
+     settling wobbles before it comes to rest, mimicking real momentum
+     instead of a UI element sliding in. Each keyframe's own
+     animation-timing-function controls the curve INTO that stage, so the
+     pacing is uneven on purpose: slow-slow-slow, then a sudden snap. */
+  animation: skills-descend 2.6s both;
+}
+@keyframes skills-descend {
+  0% {
+    transform: translateY(-32vh) scale(0.85);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.3, 0, 0.7, 0.35); /* slow, straining push */
+  }
+  42% {
+    /* held right at the barrier, still straining */
+    transform: translateY(-19vh) scale(0.885);
+    opacity: 0.45;
+    animation-timing-function: cubic-bezier(0.1, 0.7, 0.15, 1); /* the barrier snaps — fast plunge through */
+  }
+  58% {
+    /* breaks through and overshoots past rest */
+    transform: translateY(3.5vh) scale(1.045);
+    opacity: 1;
+    animation-timing-function: ease-in-out;
+  }
+  76% {
+    transform: translateY(-1.2vh) scale(0.985);
+    animation-timing-function: ease-in-out;
+  }
+  90% {
+    transform: translateY(0.5vh) scale(1.008);
+    animation-timing-function: ease-out;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.skills-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.skill-node {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(400px, 78vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  cursor: url("/menu/cursors/logo-pointer.png") 0 0, pointer;
+  /* Slow, decelerating swing instead of a quick snap — reads as something
+     big and heavy settling into place rather than a light UI flick. */
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.7s ease;
+}
+.skill-constellation {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.constellation-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 10px rgba(238, 231, 214, 0.35));
+}
+.constellation-lines line {
+  stroke: rgba(238, 231, 214, 0.55);
+  stroke-width: 1;
+}
+.constellation-stars circle {
+  fill: #eee7d6;
+}
+/* Matching the reference: every visible skill shows its own name + bar at
+   the same time, not just the centered one — only the description line
+   is reserved for whichever skill is actually centered. */
+.skill-node.is-active .constellation-svg {
+  filter: drop-shadow(0 0 16px rgba(238, 231, 214, 0.6));
+}
+.skill-node:not(.is-active) .skill-card .item-description,
+.skill-node:not(.is-active) .skill-card .skill-dots {
+  display: none;
+}
+
+.skill-card {
+  /* No panel/box — sits directly on the starfield, matching the reference. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  text-align: center;
+}
+.skill-card h3 {
+  font-family: "Futura Condensed", sans-serif;
+  font-weight: 700;
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.85), 0 0 3px rgba(0, 0, 0, 0.9);
+}
+.skill-divider {
+  width: min(170px, 55%);
+  height: auto;
+  display: block;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 6px rgba(238, 231, 214, 0.3)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7));
+}
+.skill-card .item-description {
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.9);
+  max-width: 26ch;
+}
+.skill-dots {
+  display: flex;
+  gap: 0.35em;
+  justify-content: center;
+}
+.skill-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--panel-border);
+}
+.skill-dots span.filled {
+  background: var(--ink);
+}
+
+.skills-arrow {
+  position: relative;
+  z-index: 20;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1;
+  padding: 0.5em 0.6em;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+.skills-arrow:hover {
+  color: var(--ink);
+  text-shadow: 0 0 14px rgba(238, 231, 214, 0.6);
+}
+
+/* ---------- placeholder screens (magic / map) ---------- */
+
+.placeholder-panel {
+  max-width: 60ch;
+  padding: 2.5rem;
+  margin: 0 auto;
+  text-align: center;
+}
+.placeholder-panel p {
+  color: var(--ink-dim);
+  font-weight: 300;
+  line-height: 1.7;
+}
+
+} /* end @scope (#pause-menu-root) part 2 */

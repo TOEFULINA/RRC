@@ -1,0 +1,3 @@
+Drop your clothing/fashion photos in this folder (portrait works best, e.g. 800x1000px, jpg or png,
+ideally on a plain background or cut out).
+Then in js/data.js, set the matching entry's "image" field to "images/clothing/your-file-name.jpg".

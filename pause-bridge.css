@@ -1,0 +1,107 @@
+/* ---------------------------------------------------------------------------
+ * pause-bridge.css — glue between the room (style.css) and the ported
+ * Skyrim-compass menu (menu.css, scoped to #pause-menu-root). Nothing in
+ * here belongs to either original stylesheet: it's the pause button, the
+ * room's blur/dim-while-paused look, and #pause-menu-root's own show/hide
+ * transition. Loaded last (see index.html) so it always wins ties.
+ * ------------------------------------------------------------------------- */
+
+/* ---------- the room, while paused ---------- */
+
+#scene {
+  transition: filter 0.35s ease;
+}
+body.paused #scene {
+  /* The frozen frame underneath the menu (see js/main.js's pause-open
+     snapshot) reads as "paused" via this blur/dim, same as the moody
+     blurred backdrop menu.css already gives every other screen. */
+  filter: blur(6px) brightness(0.55) saturate(0.85);
+}
+
+body.paused #mobile-controls,
+body.paused #mobile-cycle-controls,
+body.paused #pause-open-btn {
+  display: none !important;
+}
+
+/* ---------- #pause-menu-root show/hide ---------- */
+
+#pause-menu-root {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+#pause-menu-root.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.3s ease, visibility 0s linear 0s;
+}
+
+/* ---------- pause open / close buttons ---------- */
+
+#pause-open-btn,
+#pause-close-btn {
+  font-family: "Futura Condensed", "Bahnschrift", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  padding: 0.6em 1.2em;
+  background: rgba(8, 8, 6, 0.55);
+  border: 1px solid rgba(160, 160, 160, 0.4);
+  color: #eee7d6;
+  cursor: pointer;
+  transition: opacity 0.3s ease, background 0.15s ease, border-color 0.15s ease;
+}
+#pause-open-btn:hover,
+#pause-open-btn:focus-visible,
+#pause-close-btn:hover,
+#pause-close-btn:focus-visible {
+  background: rgba(8, 8, 6, 0.8);
+  border-color: rgba(238, 231, 214, 0.6);
+}
+
+/* Opens the menu — sits over the room, bottom-right, same corner rhythm as
+   the mobile d-pad it hides alongside. Stays invisible/inert until the
+   wake-up sequence reveals it (see js/main.js, same moment as
+   #mobile-controls). */
+#pause-open-btn {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+}
+#pause-open-btn.show {
+  opacity: 0.7;
+  pointer-events: auto;
+}
+#pause-open-btn.show:hover,
+#pause-open-btn.show:focus-visible {
+  opacity: 1;
+}
+
+/* Closes the menu outright (unlike Escape, which steps back to the compass
+   first if you're inside a section) — pinned corner so it's reachable from
+   every screen the menu can show, same as topNav's home glyph is for
+   in-menu navigation. */
+#pause-close-btn {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  z-index: 3;
+}
+
+@media (max-width: 640px) {
+  #pause-open-btn,
+  #pause-close-btn {
+    font-size: 0.65rem;
+    padding: 0.5em 0.9em;
+  }
+}

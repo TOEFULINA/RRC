@@ -1,0 +1,2 @@
+Drop your album cover images in this folder (square works best, e.g. 1000x1000px, jpg or png).
+Then in js/data.js, set the matching entry's "image" field to "images/covers/your-file-name.jpg".

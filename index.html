@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>the room — portfolio</title>
+<link rel="stylesheet" href="style.css" />
+<!-- Ported Skyrim-compass portfolio, scoped to #pause-menu-root only (see
+     menu.css's own header comments for how the scoping works) — it does
+     NOT affect anything above. -->
+<link rel="stylesheet" href="menu.css" />
+<!-- Glue styles new to this combined project: pause button, the room's
+     blur/dim-on-pause filter, and #pause-menu-root's own fade transition. -->
+<link rel="stylesheet" href="pause-bridge.css" />
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="loading-inner">
+      <div class="loading-title">loading</div>
+      <div class="loading-sub"></div>
+    </div>
+  </div>
+
+  <div id="intro-overlay" class="hidden">
+    <div class="menu-question">what do you want to do?</div>
+    <div class="menu-options">
+      <button id="flat-portfolio-btn" class="menu-option">flat portfolio</button>
+      <button id="get-up-btn" class="menu-option">wake up</button>
+    </div>
+    <div id="menu-note" class="menu-note hidden">flat portfolio's coming soon — check back later.</div>
+  </div>
+
+  <div id="eyelid-top"></div>
+  <div id="eyelid-bottom"></div>
+
+  <div id="wake-subtitle"></div>
+
+  <div id="mobile-controls">
+    <button id="mc-w" class="mc-btn mc-w" aria-label="walk forward">&#9650;</button>
+    <button id="mc-a" class="mc-btn mc-a" aria-label="walk left">&#9664;</button>
+    <button id="mc-s" class="mc-btn mc-s" aria-label="walk back">&#9660;</button>
+    <button id="mc-d" class="mc-btn mc-d" aria-label="walk right">&#9654;</button>
+  </div>
+
+  <!-- mobile-only prev/next for whatever's currently browsable (vinyl crate,
+       closet rack) — the touch equivalent of the ArrowLeft/ArrowRight keys,
+       only shown while one of those is actually focused (see main.js) -->
+  <div id="mobile-cycle-controls">
+    <button id="mc-cycle-prev" class="mc-cycle-btn" aria-label="previous">&#8249;</button>
+    <button id="mc-cycle-next" class="mc-cycle-btn" aria-label="next">&#8250;</button>
+  </div>
+
+  <canvas id="scene"></canvas>
+
+  <!-- Opens the pause menu — same action as pressing Escape while free-
+       roaming, but works on touch devices with no keyboard. Revealed once
+       you're up and walking (see main.js, same moment #mobile-controls
+       shows). -->
+  <button id="pause-open-btn" aria-label="Open menu">Menu</button>
+
+  <!-- lightbox for viewing portfolio pieces -->
+  <div id="lightbox" class="hidden">
+    <div id="lightbox-backdrop"></div>
+    <div id="lightbox-card">
+      <button id="lightbox-close" aria-label="close">&times;</button>
+      <button id="lightbox-prev" aria-label="previous">&#8249;</button>
+      <div id="lightbox-media">
+        <canvas id="lightbox-canvas"></canvas>
+      </div>
+      <button id="lightbox-next" aria-label="next">&#8250;</button>
+      <div id="lightbox-info">
+        <div id="lightbox-kicker"></div>
+        <h2 id="lightbox-title"></h2>
+        <p id="lightbox-desc"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skyrim-style pause menu — this is the ported compass-portfolio
+       (see js/menu/). Hidden/inert until pauseState.js marks it open;
+       #bg-layer's background is set at that moment to a snapshot of
+       whatever the room canvas was just showing (see js/main.js), so it
+       reads as "the room, paused" rather than a fixed backdrop image —
+       except on the Skills screen, which swaps in its own nebula backdrop
+       exactly like the standalone compass site did (see skillsView.js). -->
+  <div id="pause-menu-root">
+    <div id="bg-layer"></div>
+    <div id="bg-overlay"></div>
+    <div id="app"></div>
+    <button id="pause-close-btn" class="rune" aria-label="Resume">Resume</button>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "three/examples/jsm/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module" src="js/main.js?v=2026-08-26combo1"></script>
+  <script type="module" src="js/menu/main.js?v=2026-08-26combo1"></script>
+</body>
+</html>

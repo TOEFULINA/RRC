@@ -1,0 +1,6 @@
+Drop your poster/graphic-design image files in this folder, then point to
+them from POSTER_SETS in js/data.js, e.g.:
+
+  image: "images/posters/my-design.jpg"
+
+See the comment above POSTER_SETS in js/data.js for the full instructions.
