@@ -1,5 +1,5 @@
 import { COMPASS_DIRECTIONS, MAP_EXTERNAL_URL } from "../config.js";
-import { setPauseMenuOpen } from "../pauseState.js";
+import { setPauseMenuOpen } from "../../pauseState.js";
 import { navigate } from "../router.js";
 import { cameFromToefulina, goBackToReferrer } from "../utils/referrer.js";
 
