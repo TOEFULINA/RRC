@@ -2263,11 +2263,6 @@ function exitSeatFocus() {
   focusedKind = null;
   setMobileMoveControlsVisible(true);
 
-  // if the black-screen menu (see startSeatedIntro / get-up-btn below) is
-  // still up, clear it — covers standing up via WASD/Escape before ever
-  // clicking a menu button, so it never gets stuck showing over a
-  // free-roam view
-  document.getElementById("intro-overlay").classList.add("hidden");
   // in case WASD/Escape fired before the "get up" button ever opened the
   // eyelids (menu's shown on the still-closed black screen — see
   // startSeatedIntro), make sure they're open so standing up doesn't leave
@@ -2568,7 +2563,6 @@ function tryRestoreViewState() {
   wakeSubtitlesShown = true;
   standUpSubtitleShown = true;
   ensureEyesOpen();
-  document.getElementById("intro-overlay").classList.add("hidden");
   setMobileMoveControlsVisible(true);
   document.getElementById("pause-open-btn").classList.add("show");
   // this only ever runs on the "resumed from a reload" path — a fresh
@@ -2579,16 +2573,14 @@ function tryRestoreViewState() {
   return true;
 }
 
-// ---------------------------------------------------------------- intro / start menu
-// The site starts already seated — no separate "wake up" choice, and no
-// blur. As soon as the model + chair are ready (see startSeatedIntro,
-// called right after the loading screen hides), the camera snaps straight
-// into the chair with no visible tween (the eyelids' default CSS state
-// already fully covers the screen, so the snap itself is invisible), and
-// the "flat portfolio" / "get up" menu comes up immediately, sitting on
-// that same still-closed black screen. Only once you actually click
-// "get up" do the eyelids blink a few times and part to reveal the seated
-// view underneath (see openEyesReveal).
+// ---------------------------------------------------------------- intro / auto wake-up
+// The site starts already seated, no visible tween (the eyelids' default
+// CSS state already fully covers the screen, so the snap into the chair
+// is invisible) — then wakes up on its own after a short beat instead of
+// waiting on a "what do you want to do?" choice. That choice used to
+// split off to a separate flat-portfolio view; the ported Skyrim pause
+// menu (Escape, or the on-screen button once you're up - see js/menu/)
+// is the real navigation now, so there's nothing left to choose here.
 function startSeatedIntro() {
   if (!modelSeats.length) return; // no chair found in this export — stay in free-roam, nothing to seat into
 
@@ -2615,7 +2607,9 @@ function startSeatedIntro() {
   focusedKind = "seat";
   viewState = "focused";
 
-  document.getElementById("intro-overlay").classList.remove("hidden");
+  // Same beat a person reads "what do you want to do?" and clicks "wake
+  // up" would've taken, minus asking - then the usual blink-and-reveal.
+  setTimeout(openEyesReveal, 900);
 }
 
 // Skyrim-style wake-up subtitles — two lines, shown once ever (not replayed
@@ -2761,17 +2755,6 @@ function ensureEyesOpen() {
   showWakeSubtitles();
 }
 
-document.getElementById("get-up-btn").addEventListener("click", () => {
-  document.getElementById("intro-overlay").classList.add("hidden");
-  openEyesReveal();
-});
-
-// "flat portfolio" isn't built yet — just a placeholder note for now, the
-// menu stays up (still on the black screen) so "get up" is still available.
-document.getElementById("flat-portfolio-btn").addEventListener("click", () => {
-  document.getElementById("menu-note").classList.remove("hidden");
-});
-
 // ---------------------------------------------------------------- resize
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -2838,8 +2821,10 @@ new MutationObserver(() => {
 // point closing it). Room-specific side effects live here rather than
 // in pauseState.js so that tiny shared module stays a dumb pub/sub and
 // doesn't need to know about controls/moveKeys/the renderer at all.
+let pausedControlsWereEnabled = true;
 onPauseMenuChange((open) => {
   if (open) {
+    pausedControlsWereEnabled = controls.enabled;
     // Freeze the room exactly as it looked the instant you paused — a
     // still frame of the actual scene/angle, not a fixed backdrop
     // image. Re-render once first in case the last committed frame is
@@ -2860,20 +2845,28 @@ onPauseMenuChange((open) => {
     controls.enabled = false;
     moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
   } else {
-    // Pause can only ever be opened from viewState === "free" (see the
-    // Escape handler above), so controls.enabled === true is always
-    // the correct thing to restore back to here.
-    controls.enabled = true;
+    // Restore whatever controls.enabled actually was before pausing -
+    // true for ordinary free-roam, but false if you paused while
+    // zoomed into something (the seat, a record, a shirt...), where it
+    // was already locked for reasons that have nothing to do with the
+    // pause menu.
+    controls.enabled = pausedControlsWereEnabled;
   }
 });
 
 function openPauseMenuFromUI() {
-  // Same gate the Escape handler uses — ignore the on-screen button if
-  // it somehow got clicked mid-lightbox/mid-focus/mid-tween instead of
-  // during ordinary free-roam.
+  // Unlike Escape (which backs out of a focused view one step at a
+  // time - see the keydown handler above), the on-screen button has no
+  // "back out" step of its own, so it needs to work from more states
+  // than just ordinary free-roam. In particular it becomes visible the
+  // moment your eyes open (openEyesReveal/ensureEyesOpen), which can
+  // still be mid-seated ("focused", not yet "free") - pausing there
+  // just freezes on the seated view, same idea as pausing zoomed into
+  // a record or a shirt. Only a mid-transition tween and the lightbox
+  // are excluded, same as Escape effectively is via its own branches.
   if (isPauseMenuOpen()) return;
   if (!lightbox.classList.contains("hidden")) return;
-  if (viewState !== "free") return;
+  if (viewState !== "free" && viewState !== "focused") return;
   setPauseMenuOpen(true);
 }
 document.getElementById("pause-open-btn").addEventListener("click", openPauseMenuFromUI);
