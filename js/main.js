@@ -14,6 +14,7 @@ import { getArtCanvas, getArtTexture, makeSmokeSpriteTexture, makeDustMoteTextur
 import { CLOTHING, CANVAS_DESIGNS, PAPER_ILLUSTRATIONS } from "./data.js?v=2026-08-08ap";
 import { applyBakedLook } from "./bakedLook.js?v=2026-08-08ar";
 import { applyLowPolyLook } from "./lowPoly.js?v=2026-08-26lp1";
+import { initJoystick, getJoystickVector } from "./joystick.js?v=2026-08-26js1";
 import { getDesktopScreenTexture, handleDesktopScreenClick } from "./desktopScreen.js?v=2026-08-08av";
 import { getPhoneScreenTexture, handlePhoneScreenClick } from "./phoneScreen.js?v=2026-08-08av";
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
@@ -2741,7 +2742,7 @@ function openEyesReveal() {
       eyeBottom.classList.add("slow-open");
       eyeTop.classList.add("open");
       eyeBottom.classList.add("open");
-      document.getElementById("mobile-controls").classList.add("show");
+      document.getElementById("joystick").classList.add("show");
       document.getElementById("pause-open-btn").classList.add("show");
       showWakeSubtitles();
       setTimeout(() => {
@@ -2770,7 +2771,7 @@ function ensureEyesOpen() {
   if (eyeTop.classList.contains("open")) return;
   eyeTop.classList.add("slow-open", "open", "done");
   eyeBottom.classList.add("slow-open", "open", "done");
-  document.getElementById("mobile-controls").classList.add("show");
+  document.getElementById("joystick").classList.add("show");
   document.getElementById("pause-open-btn").classList.add("show");
   showWakeSubtitles();
 }
@@ -2907,23 +2908,15 @@ document.getElementById("pause-close-btn").addEventListener("click", () => setPa
 // works the same whether it's a finger or a mouse, and pointercancel/
 // pointerleave make sure a key doesn't get stuck "down" if a finger slides
 // off the button instead of lifting cleanly.
-const MOBILE_MOVE_BUTTON_KEYS = { "mc-w": "w", "mc-a": "a", "mc-s": "s", "mc-d": "d" };
-Object.entries(MOBILE_MOVE_BUTTON_KEYS).forEach(([id, key]) => {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  const press = (e) => {
-    e.preventDefault();
-    pressMoveKey(key);
-  };
-  const release = (e) => {
-    e.preventDefault();
-    releaseMoveKey(key);
-  };
-  btn.addEventListener("pointerdown", press);
-  btn.addEventListener("pointerup", release);
-  btn.addEventListener("pointercancel", release);
-  btn.addEventListener("pointerleave", release);
-  btn.addEventListener("contextmenu", (e) => e.preventDefault());
+// The stick replaces the old per-button d-pad wiring. Standing up out of
+// the chair on first touch is preserved via onStart, which is what the
+// d-pad used to get for free by routing through pressMoveKey.
+initJoystick({
+  onStart: () => {
+    if (isPauseMenuOpen()) return;
+    if (!lightbox.classList.contains("hidden")) return;
+    if (viewState === "focused" && focusedKind === "seat") exitSeatFocus();
+  },
 });
 
 // ---------------------------------------------------------------- on-screen mobile prev/next
@@ -2942,7 +2935,7 @@ function setMobileCycleControlsVisible(visible) {
 // instant any camera-focus mode kicks in (vinyl, props/canvases, seat,
 // rack) and brought back once you're back in walkable free-roam, mirroring
 // setMobileCycleControlsVisible above.
-const mobileMoveControls = document.getElementById("mobile-controls");
+const mobileMoveControls = document.getElementById("joystick");
 // #pause-open-btn rides along with the WASD d-pad for the same reason -
 // opening the pause menu mid-focus (zoomed into a record, a shirt, the
 // seat) is not a state the Escape handler allows either, so there is no
@@ -2965,7 +2958,17 @@ const _moveForward = new THREE.Vector3();
 const _moveRight = new THREE.Vector3();
 const _moveVec = new THREE.Vector3();
 function applyWalkMovement(delta) {
-  if (!moveKeys.w && !moveKeys.a && !moveKeys.s && !moveKeys.d) return;
+  // The stick holds its value while the pause menu is open (a finger can
+  // still be resting on it), and animate() keeps running - so without this
+  // the camera would keep walking behind the compass.
+  if (isPauseMenuOpen()) return;
+  // Two input sources feed this one step: the keyboard (boolean, full
+  // speed) and the touch stick (analog). Whichever is being used, the
+  // collision handling and speed below stay identical.
+  const stick = getJoystickVector();
+  const stickMag = Math.hypot(stick.x, stick.y);
+  const keysDown = moveKeys.w || moveKeys.a || moveKeys.s || moveKeys.d;
+  if (!keysDown && stickMag === 0) return;
 
   camera.getWorldDirection(_moveForward);
   _moveForward.y = 0;
@@ -2977,8 +2980,19 @@ function applyWalkMovement(delta) {
   if (moveKeys.s) _moveVec.sub(_moveForward);
   if (moveKeys.d) _moveVec.add(_moveRight);
   if (moveKeys.a) _moveVec.sub(_moveRight);
+
+  // Stick contribution is scaled by how far it is pushed, so a small
+  // nudge is a slow walk. Keyboard stays all-or-nothing.
+  if (stickMag > 0) {
+    _moveVec.addScaledVector(_moveForward, stick.y);
+    _moveVec.addScaledVector(_moveRight, stick.x);
+  }
+
   if (_moveVec.lengthSq() === 0) return;
-  _moveVec.normalize().multiplyScalar(MOVE_SPEED * delta);
+  // Clamp rather than normalize, so partial stick stays partial speed
+  // while the keyboard (length >= 1) still resolves to full speed.
+  const throttle = Math.min(1, _moveVec.length());
+  _moveVec.normalize().multiplyScalar(MOVE_SPEED * throttle * delta);
 
   // resolve against furniture per-axis so you slide along an obstacle's
   // edge instead of a full hard stop the instant you brush it

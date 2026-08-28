@@ -31,11 +31,11 @@
 
   <div id="wake-subtitle"></div>
 
-  <div id="mobile-controls">
-    <button id="mc-w" class="mc-btn mc-w" aria-label="walk forward">&#9650;</button>
-    <button id="mc-a" class="mc-btn mc-a" aria-label="walk left">&#9664;</button>
-    <button id="mc-s" class="mc-btn mc-s" aria-label="walk back">&#9660;</button>
-    <button id="mc-d" class="mc-btn mc-d" aria-label="walk right">&#9654;</button>
+  <!-- Touch movement. Replaces the old 4-button WASD d-pad: a stick
+       reports direction AND how far it is pushed, so you can ease into a
+       walk and move diagonally with one thumb. -->
+  <div id="joystick">
+    <div id="joystick-knob"></div>
   </div>
 
   <!-- mobile-only prev/next for whatever's currently browsable (vinyl crate,

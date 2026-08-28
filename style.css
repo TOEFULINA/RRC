@@ -229,47 +229,58 @@ html, body {
    touch-primary screens) so desktop players never see a d-pad they don't
    need. Laid out as a 3x3 grid so w/a/s/d land in their natural compass
    positions without hand-placing four separate offsets. */
-#mobile-controls {
+#joystick {
   position: fixed;
   left: 18px;
-  /* Nudged down a bit from 90px — the subtitle bar underneath is now its
-     own full-width band (see #wake-subtitle's mobile breakpoint) with a
-     predictable height, so the d-pad can sit closer to it without
-     overlapping instead of leaving a big gap. */
   bottom: 68px;
   z-index: 20;
   display: none;
-  grid-template-columns: repeat(3, 42px);
-  grid-template-rows: repeat(3, 42px);
-  gap: 6px;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  background: rgba(10, 8, 13, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   opacity: 0;
-  transition: opacity .6s ease 1s;
+  transition: opacity .6s ease 1s, background .15s ease, border-color .15s ease;
   pointer-events: none;
-  touch-action: none;
-}
-#mobile-controls.show { opacity: .85; pointer-events: auto; }
-@media (hover: none) and (pointer: coarse) {
-  #mobile-controls { display: grid; }
-}
-.mc-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(10,8,13,0.55);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 10px;
-  color: #f2ece2;
-  font-size: 0.9rem;
-  line-height: 1;
+  /* Without this the browser claims the drag as a scroll/pan gesture and the
+     stick stops receiving pointermove halfway through a push. */
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
 }
-.mc-btn:active { background: rgba(255,206,107,0.3); }
-.mc-w { grid-column: 2; grid-row: 1; }
-.mc-a { grid-column: 1; grid-row: 2; }
-.mc-s { grid-column: 2; grid-row: 2; }
-.mc-d { grid-column: 3; grid-row: 2; }
+#joystick.show { opacity: .85; pointer-events: auto; }
+#joystick.active {
+  background: rgba(10, 8, 13, 0.6);
+  border-color: rgba(255, 206, 107, 0.5);
+}
+/* Touch-primary screens only - desktop drives this with WASD and never
+   needs to see a stick. */
+@media (hover: none) and (pointer: coarse) {
+  #joystick { display: block; }
+}
+
+#joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: 0;
+  border-radius: 50%;
+  background: rgba(242, 236, 226, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+/* Snap home when released, but follow the thumb 1:1 while held. */
+#joystick:not(.active) #joystick-knob {
+  transition: transform .18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#joystick.active #joystick-knob {
+  background: rgba(255, 206, 107, 0.92);
+}
 
 /* ---------- on-screen mobile prev/next (vinyl crate, closet rack) ---------- */
 /* Same touch-only gating as #mobile-controls above, but shown/hidden by JS
