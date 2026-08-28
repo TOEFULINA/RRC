@@ -13,6 +13,7 @@ import { loadRoomModel } from "./loadModel.js?v=2026-08-08au";
 import { getArtCanvas, getArtTexture, makeSmokeSpriteTexture, makeDustMoteTexture } from "./textures.js?v=2026-08-08ap";
 import { CLOTHING, CANVAS_DESIGNS, PAPER_ILLUSTRATIONS } from "./data.js?v=2026-08-08ap";
 import { applyBakedLook } from "./bakedLook.js?v=2026-08-08ar";
+import { applyLowPolyLook } from "./lowPoly.js?v=2026-08-26lp1";
 import { getDesktopScreenTexture, handleDesktopScreenClick } from "./desktopScreen.js?v=2026-08-08av";
 import { getPhoneScreenTexture, handlePhoneScreenClick } from "./phoneScreen.js?v=2026-08-08av";
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
@@ -400,6 +401,10 @@ loadRoomModel((progress) => {
     // about to be replaced anyway.
     safeStep("baked look", () => {
       applyBakedLook(model);
+      // After applyBakedLook, not before - that swaps materials, and a
+      // swapped-in material would arrive unpatched.
+      const snapped = applyLowPolyLook(model);
+      console.info(`low-poly look: vertex snap applied to ${snapped} material(s).`);
     });
 
     // Fix ambient occlusion + tune the new environment reflections across
