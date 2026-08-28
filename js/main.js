@@ -2593,10 +2593,18 @@ function tryRestoreViewState() {
 // (enterSeatFocus/exitSeatFocus), tween and all. This only changes where
 // you begin.
 function startIntro() {
-  // Camera is already at the free-roam start framing set by the "camera
-  // framing" step above, and viewState is already "free" — so there is
-  // deliberately nothing to position or unlock here. Just open the eyes.
-  setTimeout(openEyesReveal, 900);
+  // The site opens on the compass menu as its title screen, not on the
+  // room. The room is fully loaded and sitting at its free-roam framing
+  // behind it (viewState is already "free"), so opening the pause menu
+  // here snapshots that first frame as the compass backdrop, exactly like
+  // pausing mid-walk would.
+  //
+  // The eyelids stay shut underneath and the wake-up sequence is deferred
+  // until the visitor actually leaves the menu for the room the first
+  // time (see the one-shot in the pause subscriber below) — so "you're
+  // finally awake" lands when they arrive in the room, not while they're
+  // still reading the compass.
+  setPauseMenuOpen(true);
 }
 
 // Skyrim-style wake-up subtitles — two lines, shown once ever (not replayed
@@ -2829,6 +2837,7 @@ new MutationObserver(() => {
 // in pauseState.js so that tiny shared module stays a dumb pub/sub and
 // doesn't need to know about controls/moveKeys/the renderer at all.
 let pausedControlsWereEnabled = true;
+let enteredRoomOnce = false;
 onPauseMenuChange((open) => {
   if (open) {
     pausedControlsWereEnabled = controls.enabled;
@@ -2858,6 +2867,12 @@ onPauseMenuChange((open) => {
     // was already locked for reasons that have nothing to do with the
     // pause menu.
     controls.enabled = pausedControlsWereEnabled;
+    // First time the menu is closed we are arriving in the room for real —
+    // that is the moment the eyelids part and the wake-up lines play.
+    if (!enteredRoomOnce) {
+      enteredRoomOnce = true;
+      openEyesReveal();
+    }
   }
 });
 
