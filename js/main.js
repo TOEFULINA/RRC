@@ -9,6 +9,7 @@
 //   - the hair keeps real PBR shading, so its normal map and alpha cutout
 //     actually do something. The rest of the character is baked like the room.
 //   - the mirror gets a reflective surface
+//   - the joint smokes and the curtains sway (see ambient.js)
 //   - the windowpane is removed from the scene
 //
 // The camera start, FOV and walk bounds are HARDCODED to values measured off
@@ -24,6 +25,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
+import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a3";
 
 const MODEL_URL = "models/room.glb";
 
@@ -338,6 +340,11 @@ loader.load(
     });
 
     scene.add(model);
+
+    // Smoke off the joint + the curtain sway. After scene.add, since both
+    // need world transforms resolved.
+    initAmbient(model, scene);
+
     scene.environment = pmrem.fromScene(model, 0.02, 0.1, 40).texture;
 
     camera.position.copy(CAMERA_EYE);
@@ -380,7 +387,14 @@ function animate() {
   if (!isPauseMenuOpen()) {
     applyWalk(delta);
     applyLookDelta(0, 0); // re-derive target from the new position
+    // Ambient returns the camera-breathing offset rather than moving the
+    // camera itself, so this stays the only place camera.position is written
+    // and the walk clamp can't fight it.
+    const breath = updateAmbient(delta, clock.elapsedTime, camera);
+    const restY = camera.position.y;
+    camera.position.y += breath;
     renderer.render(scene, camera);
+    camera.position.y = restY;
   }
 }
 animate();
