@@ -283,6 +283,168 @@ function initCurtain(model, scene) {
 // screenshot, small enough that you don't consciously notice it.
 const BREATH_AMPLITUDE = 0.0028; // metres
 const BREATH_SPEED = 0.62;       // roughly a slow resting breath
+
+// =========================================================== rain
+// Rain seen THROUGH the window, not on it.
+//
+// This is two transparent planes hanging in the gap between the OUTSIDE bake
+// (its front face is at z = -1.887) and where the windowpane used to sit
+// (z = -1.844), with a tileable streak texture scrolling down them. Because
+// they live outside the wall, the wall itself occludes them — you only ever
+// see them through the window opening, so nobody can tell they're flat.
+//
+// Two layers rather than one: the back plane is slower, dimmer and denser, the
+// front one faster and sparser. That difference in speed is what sells depth;
+// a single layer reads as a moving wallpaper.
+//
+// Why not a shader on the windowpane: that gives you rain ON the glass
+// (droplets, runnels), which is a different effect and needs the pane brought
+// back into the scene — it's currently hidden. Worth adding as a second pass
+// if you want both, but the falling-outside half is this.
+const RAIN_ENABLED = true;
+const RAIN_COUNT = 2;          // layers
+const RAIN_SPEED = 1.35;       // texture-heights per second, back layer
+const RAIN_OPACITY = 1.0;      // back layer; the front is scaled from this
+// The OUTSIDE bake is a bright sunny afternoon, which fights the rain harder
+// than any amount of streak contrast can win. Knocking it down and cooling it
+// off is what actually sells the weather. This is a runtime tint on the
+// material only — the baked texture is untouched, and 1.0 disables it.
+const OVERCAST_STRENGTH = 0.62;   // 1 = leave the bake alone
+const OVERCAST_TINT = [0.86, 0.93, 1.06]; // slight blue shift, per channel
+// Flip to -1 if it ever falls upward — Three's offset sign depends on how the
+// texture was authored and it's easier to expose the knob than to argue.
+const RAIN_DIRECTION = 1;
+
+// The window opening measures x[-0.712, 0.056], y[0.717, 1.827]. The planes are
+// deliberately larger so they still fill the opening when you look through it
+// from an angle.
+// z matters more than it looks. Measured, from the camera outward:
+//   SMALLWALLS  far face  z = -1.807   (transparent BUT depthWrite:true)
+//   TRIMS       far face  z = -1.859
+//   wall planes far face  z = -1.872
+//   OUTSIDE     near face z = -1.887
+// The first attempt put the planes at -1.870/-1.858, which is *inside* the
+// window-frame assembly — SMALLWALLS drew over them at renderOrder 5 and wrote
+// depth, and TRIMS sat between the two layers. Invisible.
+// The only clean slot is the 15mm between the wall's outer face and the
+// backdrop, so both layers live in there.
+const RAIN_CENTRE = new THREE.Vector3(-0.328, 1.27, -1.880);
+const RAIN_WIDTH = 1.25;
+const RAIN_HEIGHT = 1.7;
+
+const rainLayers = [];
+
+// Drawn rather than loaded — it's a few dozen lines, tiles perfectly, and
+// saves shipping an asset. Every streak is also drawn one texture-height above
+// and below itself, so the ones crossing the top/bottom edge line up when the
+// texture wraps.
+function makeRainTexture(streaks, lengthRange, alpha) {
+  const W = 256, H = 512;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  g.clearRect(0, 0, W, H);
+  g.lineCap = "round";
+
+  for (let i = 0; i < streaks; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    const len = lengthRange[0] + Math.random() * (lengthRange[1] - lengthRange[0]);
+    const a = alpha * (0.35 + Math.random() * 0.65);
+    // Long, near-vertical strokes read as scratches on the glass rather than
+    // falling water. Shorter and more slanted is what makes it look like rain.
+    const lean = (Math.random() - 0.5) * 22;
+    for (const dy of [-H, 0, H]) {
+      const grad = g.createLinearGradient(x, y + dy, x + lean, y + dy + len);
+      grad.addColorStop(0, `rgba(236,244,255,0)`);
+      grad.addColorStop(0.35, `rgba(236,244,255,${a})`);
+      grad.addColorStop(1, `rgba(236,244,255,0)`);
+      g.strokeStyle = grad;
+      // Fat on purpose. Hairline strokes (the first attempt used 0.8-1.9px)
+      // are destroyed by minification: the plane is far enough away that the
+      // GPU samples a lower mip level, and a 1px line simply averages out of
+      // existence. Nothing was wrong with the placement — the streaks were
+      // being filtered into flat colour.
+      g.lineWidth = 2.8 + Math.random() * 3.4;
+      g.beginPath();
+      g.moveTo(x, y + dy);
+      g.lineTo(x + lean, y + dy + len);
+      g.stroke();
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  // No mipmaps, for the same reason the strokes are fat: mipmapping is exactly
+  // what erases thin bright lines on a minified texture. A little aliasing on
+  // the streaks is fine — it's rain.
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  return tex;
+}
+
+// Cools and darkens the baked view through the window. Stored so it's applied
+// exactly once even if init runs again.
+function applyOvercast(model) {
+  if (OVERCAST_STRENGTH >= 1) return;
+  model.traverse((obj) => {
+    if (!obj.isMesh) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    mats.forEach((m) => {
+      if (!m || !/outside/i.test(m.name || "") || m.userData.overcast) return;
+      m.userData.overcast = true;
+      m.color.setRGB(
+        m.color.r * OVERCAST_STRENGTH * OVERCAST_TINT[0],
+        m.color.g * OVERCAST_STRENGTH * OVERCAST_TINT[1],
+        m.color.b * OVERCAST_STRENGTH * OVERCAST_TINT[2]
+      );
+    });
+  });
+}
+
+function initRain(scene, model) {
+  rainLayers.length = 0;
+  if (!RAIN_ENABLED) return 0;
+  applyOvercast(model);
+
+  for (let i = 0; i < RAIN_COUNT; i++) {
+    const front = i === 1;
+    const tex = makeRainTexture(
+      front ? 150 : 260,          // the near layer is sparser
+      front ? [55, 115] : [34, 74],
+      front ? 1.0 : 0.85
+    );
+    tex.repeat.set(front ? 1.0 : 1.4, front ? 0.75 : 1.0);
+
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      opacity: front ? RAIN_OPACITY * 0.8 : RAIN_OPACITY,
+      depthWrite: false,          // never occludes the backdrop behind it
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+    });
+
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(RAIN_WIDTH, RAIN_HEIGHT),
+      mat
+    );
+    mesh.position.copy(RAIN_CENTRE);
+    // 3mm apart, not 12 — the whole slot is only 15mm deep.
+    mesh.position.z += front ? 0.003 : 0;
+    // Below the curtains (20) and the walls (5) so both still draw over it.
+    mesh.renderOrder = 3;
+    mesh.name = `__rain${i}`;
+    scene.add(mesh);
+
+    rainLayers.push({ tex, speed: RAIN_SPEED * (front ? 1.75 : 1) });
+  }
+  return rainLayers.length;
+}
+
 let breathOffset = 0;
 
 // =========================================================== public
@@ -291,8 +453,9 @@ export function initAmbient(model, scene) {
   const d = initDust(model, scene);
   const l = initLamps(model) + initUnlitLamps(model);
   const c = initCurtain(model, scene);
+  const r = initRain(scene, model);
   console.info(
-    `ambient: ${s} smoke, ${d} dust, ${l} lamp material(s), curtain ${c ? "on" : "off"}.`
+    `ambient: ${s} smoke, ${d} dust, ${l} lamp material(s), curtain ${c ? "on" : "off"}, ${r} rain layer(s).`
   );
 }
 
@@ -394,6 +557,19 @@ export function updateAmbient(delta, elapsed, camera) {
   } catch (err) {
     console.error("curtain sway: disabled —", err);
     curtainPivot = null;
+  }
+
+  // ---- rain ----
+  try {
+    rainLayers.forEach((l) => {
+      l.tex.offset.y += RAIN_DIRECTION * l.speed * delta;
+      // Keep the offset small forever; at 60fps an unbounded float would
+      // eventually lose the precision to represent a smooth step.
+      if (l.tex.offset.y > 1 || l.tex.offset.y < -1) l.tex.offset.y %= 1;
+    });
+  } catch (err) {
+    console.error("rain: disabled —", err);
+    rainLayers.length = 0;
   }
 
   // ---- camera breathing ----

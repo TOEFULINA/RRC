@@ -25,14 +25,14 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
-import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a5";
+import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01b2";
 import { initVinyl, updateVinyl } from "./vinyl.js";
 import { startLoaderSpin, stopLoaderSpin } from "./loaderSpin.js";
 
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
 // change — that's the only thing it can't ignore.
-const MODEL_VERSION = 11;
+const MODEL_VERSION = 12;
 const MODEL_URL = `models/room.glb?v=${MODEL_VERSION}`;
 
 // A trace of the retro look — deliberately subtle, not the full pixel crunch.
@@ -69,14 +69,21 @@ const HIDE_PATTERN = /window\s*pane|windowpane/i;
 // Reflective.
 const MIRROR_PATTERN = /^mirror$|\bmirror\b/i;
 
-// Eye height. Measured off the model: the floor plane sits at y = 0.317 and
-// the ceiling at y = 2.058, so the room is 1.741 units tall. The old 1.04 put
-// the eye 0.72 above the floor — 41% of the room's height, which is roughly
-// where your eyes are when you're SITTING. 1.42 is 63%, i.e. standing.
+// Eye height, calibrated to a real 5'0".
+//
+// The model isn't authored in metres, so the scale was pinned using two things
+// in the room whose real size is known: the door (standard interior, 80" tall,
+// 1.536 units here) and the Poang chair (100cm, 0.771 units). They agree to
+// within 2%, giving 1 unit = 1.31 m — which also puts the ceiling at 2.28 m
+// and the mattress at 1.81 m, both sane, so the number is trustworthy.
+//
+// Floor plane is y = 0.317. Eye height runs ~93.5% of stature, so 5'0" (1.524 m)
+// sees from 1.425 m = 1.088 units up. 0.317 + 1.088 = 1.405.
+//
 // Both y values match so the opening gaze is level; move them together or the
-// view starts tilted.
-const CAMERA_EYE = new THREE.Vector3(0.3262, 1.42, -1.21);
-const CAMERA_TARGET = new THREE.Vector3(-0.4828, 1.42, 0.106);
+// view starts tilted. Rough feel for the dial: 1.37 reads as 4'10", 1.44 as 5'2".
+const CAMERA_EYE = new THREE.Vector3(0.3262, 1.405, -1.21);
+const CAMERA_TARGET = new THREE.Vector3(-0.4828, 1.405, 0.106);
 const CAMERA_FOV = 75;
 
 // Measured off the model in world space rather than guessed:
@@ -492,6 +499,7 @@ loader.load(
     scene.environment = pmrem.fromScene(model, 0.02, 0.1, 40).texture;
 
     setPixelTextures(PIXEL_TEXTURES);
+
 
     camera.position.copy(CAMERA_EYE);
     target.copy(CAMERA_TARGET);
