@@ -19,13 +19,19 @@
 // through pauseState.js.
 // ---------------------------------------------------------------------------
 
+// Printed first thing so there is never any doubt about which build a page is
+// actually running. If this line is missing from the console, the browser is
+// serving cached or different files and nothing below has taken effect.
+console.info("%cBUILD rain-c2 — sprite rain + smallwalls alphaTest",
+  "background:#123;color:#8fd;padding:2px 6px;border-radius:3px");
+
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
-import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01b2";
+import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01c1";
 import { initVinyl, updateVinyl } from "./vinyl.js";
 import { startLoaderSpin, stopLoaderSpin } from "./loaderSpin.js";
 
@@ -63,8 +69,16 @@ const LIT_PATTERN = /^(hair\d*|shirts)$/i;
 // what stops it punching through them at certain angles.
 const NEEDS_ALPHA = /^(curtains|hair\d*|smallwalls|rug)$/i;
 
-// Windowpane is removed from the scene entirely.
-const HIDE_PATTERN = /window\s*pane|windowpane/i;
+// Nothing is hidden right now. (The windowpane used to be — see GLASS_PATTERN.)
+const HIDE_PATTERN = /(?!)/;
+
+// The windowpane. It is NOT a pane: it's an 8-vertex box, 12 triangles, with
+// no UVs and — the important part — no NORMAL attribute at all. That's why it
+// showed up as a black slab the first time round: PBR shading with no normals
+// has nothing to reflect with, so every pixel comes out black. flatShading
+// fixes it by deriving the normal per-face in the shader instead of reading it
+// from the geometry.
+const GLASS_PATTERN = /window\s*pane|windowpane/i;
 
 // Reflective.
 const MIRROR_PATTERN = /^mirror$|\bmirror\b/i;
@@ -211,7 +225,14 @@ function toUnlit(src) {
     // Sheer fabric shouldn't occlude what's behind it, but flat surfaces
     // lying against other geometry should — without depth, the bookshelf and
     // bed read through the wallpaper, and the floor reads through the rug.
-    m.depthWrite = /smallwall|rug/i.test(src.name || "");
+    // The wallpaper and the rug must occlude what's behind them, so they keep
+    // depth writing. But a BLENDED surface writes depth even where it is fully
+    // transparent — which meant the window cut-out in the wallpaper was still
+    // laying down depth across the whole opening and culling anything outside.
+    // alphaTest discards those fragments outright, so the hole is a real hole.
+    const solidish = /smallwall|rug/i.test(src.name || "");
+    m.depthWrite = solidish;
+    if (solidish) m.alphaTest = Math.max(m.alphaTest || 0, 0.5);
   } else {
     // Forced opaque — see NEEDS_ALPHA above.
     m.transparent = false;
@@ -237,6 +258,23 @@ function toLit(src) {
   // the cost is hair never occluding hair, which reads fine on soft strands.
   if (m.transparent) m.depthWrite = false;
   return sharpenAll(m);
+}
+
+// Faint, reflective, and never occluding: depthWrite is off so the rain and
+// the view behind it always come through, and the render order sits above the
+// rain (3) but below the curtains (20).
+function toGlass() {
+  return new THREE.MeshPhysicalMaterial({
+    color: 0xdce7f2,
+    metalness: 0,
+    roughness: 0.06,
+    transparent: true,
+    opacity: 0.11,
+    envMapIntensity: 1.6,
+    flatShading: true,   // the geometry carries no normals — see GLASS_PATTERN
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
 }
 
 function toMirror() {
@@ -448,7 +486,7 @@ loader.load(
   (gltf) => {
     const model = gltf.scene;
     const cache = new Map();
-    let unlit = 0, lit = 0, mirrors = 0, hidden = 0;
+    let unlit = 0, lit = 0, mirrors = 0, hidden = 0, glass = 0;
 
     model.traverse((obj) => {
       if (!obj.isMesh) return;
@@ -458,6 +496,13 @@ loader.load(
       if (HIDE_PATTERN.test(name) || HIDE_PATTERN.test(parentName)) {
         obj.visible = false;
         hidden++;
+        return;
+      }
+
+      if (GLASS_PATTERN.test(name) || GLASS_PATTERN.test(parentName)) {
+        obj.material = toGlass();
+        obj.renderOrder = 10;
+        glass++;
         return;
       }
 
@@ -473,9 +518,18 @@ loader.load(
       // against each other by accident: walls first, then curtains, which hang
       // in front of them and must always win.
       // The rug sits on the floor, under everything, so it draws first.
-      if (/^rug$/i.test(name) || /^rug$/i.test(parentName)) obj.renderOrder = 1;
-      if (/smallwall/i.test(name) || /smallwall/i.test(parentName)) obj.renderOrder = 5;
-      if (/curtain/i.test(name) || /curtain/i.test(parentName)) obj.renderOrder = 20;
+      //
+      // MATCH ON MATERIAL NAME, NOT JUST OBJECT NAME. The wallpaper lives on a
+      // multi-material node, so the object carrying it is called "FLOOR_3" —
+      // a name-only test never matched it and its renderOrder silently stayed
+      // at 0. That is why it drew before everything else and why the rain
+      // behind the window was being depth-culled by it.
+      const matNames = (Array.isArray(obj.material) ? obj.material : [obj.material])
+        .map((m) => m?.name || "").join(" ");
+      const tag = `${name} ${parentName} ${matNames}`;
+      if (/\brug\b/i.test(tag)) obj.renderOrder = 1;
+      if (/smallwall/i.test(tag)) obj.renderOrder = 5;
+      if (/curtain/i.test(tag)) obj.renderOrder = 20;
       const swap = (src) => {
         if (!src) return src;
         const key = `${isLit ? "L" : "U"}:${src.uuid}`;
@@ -515,7 +569,7 @@ loader.load(
 
     setPauseMenuOpen(true);
 
-    console.info(`room: ${unlit} unlit, ${lit} lit, ${mirrors} mirror, ${hidden} hidden.`);
+    console.info(`room: ${unlit} unlit, ${lit} lit, ${mirrors} mirror, ${glass} glass, ${hidden} hidden.`);
   },
   (evt) => {
     if (loadingSub && evt.total) {
