@@ -29,6 +29,16 @@ import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a3";
 
 const MODEL_URL = "models/room.glb";
 
+// A trace of the retro look — deliberately subtle, not the full pixel crunch.
+//
+// Renders slightly below native and lets the browser scale it back up, with
+// antialiasing off so polygon edges keep a little stair-stepping. 0.85 reads
+// as "not quite clean" rather than "low-res": you notice it on the ladder
+// rails and window frame, not on the room as a whole.
+//
+// 1 = fully clean, 0.85 = current, 0.6 = obviously retro, 0.4 = crunchy.
+const RENDER_SCALE = 0.85;
+
 // Hair only. It's the one thing with a normal map worth resolving, and the
 // one thing that reads wrong when it's flat. Everything else is baked and
 // renders unlit — including the rest of the character.
@@ -57,17 +67,28 @@ const CAMERA_EYE = new THREE.Vector3(0.3262, 1.04, -1.21);
 const CAMERA_TARGET = new THREE.Vector3(-0.4828, 1.04, 0.106);
 const CAMERA_FOV = 75;
 
-const BOUNDS = { minX: -1.523, maxX: 0.7885, minZ: -2.4128, maxZ: 1.3487 };
+// Measured off the model in world space rather than guessed:
+//   FLOOR      x[-1.449, 0.705]  z[-1.872, 1.400]
+//   MAINWALL   plane at x = 0.672
+//   WINDOWPANE z = -1.86  (the far wall)
+//   CLOSETWALL z[ 0.713, 1.280] (solid volume, not a plane)
+// The old box ran ~0.54m past the far wall, which is exactly what let you walk
+// out through the window. maxZ stops at the closet's front face so you can't
+// walk into the closet either.
+const BOUNDS = { minX: -1.449, maxX: 0.672, minZ: -1.872, maxZ: 0.713 };
 const WALL_MARGIN = 0.18;
 
 // ---------------------------------------------------------------- renderer
 const canvas = document.getElementById("scene");
 const renderer = new THREE.WebGLRenderer({
   canvas,
-  antialias: true,
+  // Off on purpose — jagged edges are the whole point of RENDER_SCALE above.
+  antialias: false,
   preserveDrawingBuffer: true, // the pause menu screenshots this canvas
 });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// devicePixelRatio is deliberately ignored: on a retina screen it would
+// render at 2x and cancel out RENDER_SCALE entirely.
+renderer.setPixelRatio(RENDER_SCALE);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;
@@ -204,13 +225,47 @@ const _forward = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _move = new THREE.Vector3();
 
+// Head bob. The phase advances with distance travelled rather than with time,
+// so the step rate is tied to how far you actually move and stays in sync no
+// matter the frame rate. Two footfalls per stride, hence the doubled sine on
+// the vertical; the roll runs at half that so the lean alternates left/right
+// across the pair.
+const BOB_STEPS_PER_METRE = 1.55;
+const BOB_RISE = 0.0065;  // metres of vertical travel
+const BOB_ROLL = 0.0028;  // radians of side-to-side lean
+const BOB_EASE = 3.5;     // how fast the bob fades in when you start walking
+let bobPhase = 0;
+let bobBlend = 0;
+
+// Called every frame, walking or not, so the bob can ease back out instead of
+// snapping to level the instant you release the key.
+function updateBob(delta, distance) {
+  bobPhase += distance * BOB_STEPS_PER_METRE * Math.PI * 2;
+  const wanted = distance > 0 ? 1 : 0;
+  bobBlend += (wanted - bobBlend) * Math.min(1, delta * BOB_EASE);
+  if (bobBlend < 0.0005) bobBlend = 0;
+}
+
+function bobRise() {
+  // A plain sine, one cycle per stride. abs(sin) reads as a hop because it
+  // spikes on every footfall and spends most of its time near the bottom;
+  // this just sways through the resting height instead.
+  return bobBlend * BOB_RISE * Math.sin(bobPhase);
+}
+function bobRoll() {
+  return bobBlend * BOB_ROLL * Math.sin(bobPhase * 0.5 + Math.PI * 0.5);
+}
+
 function applyWalk(delta) {
   if (isPauseMenuOpen()) return;
-  if (!moveKeys.w && !moveKeys.a && !moveKeys.s && !moveKeys.d) return;
+  if (!moveKeys.w && !moveKeys.a && !moveKeys.s && !moveKeys.d) {
+    updateBob(delta, 0);
+    return;
+  }
 
   camera.getWorldDirection(_forward);
   _forward.y = 0;
-  if (_forward.lengthSq() === 0) return;
+  if (_forward.lengthSq() === 0) { updateBob(delta, 0); return; }
   _forward.normalize();
   _right.crossVectors(_forward, camera.up).normalize();
 
@@ -219,15 +274,20 @@ function applyWalk(delta) {
   if (moveKeys.s) _move.sub(_forward);
   if (moveKeys.d) _move.add(_right);
   if (moveKeys.a) _move.sub(_right);
-  if (_move.lengthSq() === 0) return;
+  if (_move.lengthSq() === 0) { updateBob(delta, 0); return; }
   _move.normalize().multiplyScalar(MOVE_SPEED * delta);
 
+  const beforeX = camera.position.x;
+  const beforeZ = camera.position.z;
   camera.position.x = THREE.MathUtils.clamp(
     camera.position.x + _move.x, BOUNDS.minX + WALL_MARGIN, BOUNDS.maxX - WALL_MARGIN
   );
   camera.position.z = THREE.MathUtils.clamp(
     camera.position.z + _move.z, BOUNDS.minZ + WALL_MARGIN, BOUNDS.maxZ - WALL_MARGIN
   );
+  // Distance ACTUALLY covered, measured after the clamp — walk into a wall and
+  // the bob stops rather than jogging on the spot.
+  updateBob(delta, Math.hypot(camera.position.x - beforeX, camera.position.z - beforeZ));
 }
 
 function pressKey(k) {
@@ -376,6 +436,7 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(RENDER_SCALE);
 });
 
 // ---------------------------------------------------------------- loop
@@ -392,9 +453,12 @@ function animate() {
     // and the walk clamp can't fight it.
     const breath = updateAmbient(delta, clock.elapsedTime, camera);
     const restY = camera.position.y;
-    camera.position.y += breath;
+    const restRoll = camera.rotation.z;
+    camera.position.y += breath + bobRise();
+    camera.rotation.z += bobRoll();
     renderer.render(scene, camera);
     camera.position.y = restY;
+    camera.rotation.z = restRoll;
   }
 }
 animate();
