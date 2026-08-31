@@ -27,7 +27,11 @@ import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseSta
 import { navigate, getCurrentRoute } from "./menu/router.js";
 import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a3";
 
-const MODEL_URL = "models/room.glb";
+// Bumped whenever the .glb changes. The browser will happily keep serving a
+// cached 16MB model even through a hard refresh, so the URL itself has to
+// change — that's the only thing it can't ignore.
+const MODEL_VERSION = 10;
+const MODEL_URL = `models/room.glb?v=${MODEL_VERSION}`;
 
 // A trace of the retro look — deliberately subtle, not the full pixel crunch.
 //
