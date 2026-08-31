@@ -25,14 +25,14 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
-import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a4";
+import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a5";
 import { initVinyl, updateVinyl } from "./vinyl.js";
 import { startLoaderSpin, stopLoaderSpin } from "./loaderSpin.js";
 
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
 // change — that's the only thing it can't ignore.
-const MODEL_VERSION = 10;
+const MODEL_VERSION = 11;
 const MODEL_URL = `models/room.glb?v=${MODEL_VERSION}`;
 
 // A trace of the retro look — deliberately subtle, not the full pixel crunch.
@@ -48,7 +48,7 @@ const RENDER_SCALE = 0.85;
 // Hair only. It's the one thing with a normal map worth resolving, and the
 // one thing that reads wrong when it's flat. Everything else is baked and
 // renders unlit — including the rest of the character.
-const LIT_PATTERN = /^hair\d*$/i;
+const LIT_PATTERN = /^(hair\d*|shirts)$/i;
 
 // Which materials genuinely need alpha blending. Everything else is forced
 // opaque, even if the exporter marked it BLEND.
@@ -69,8 +69,14 @@ const HIDE_PATTERN = /window\s*pane|windowpane/i;
 // Reflective.
 const MIRROR_PATTERN = /^mirror$|\bmirror\b/i;
 
-const CAMERA_EYE = new THREE.Vector3(0.3262, 1.04, -1.21);
-const CAMERA_TARGET = new THREE.Vector3(-0.4828, 1.04, 0.106);
+// Eye height. Measured off the model: the floor plane sits at y = 0.317 and
+// the ceiling at y = 2.058, so the room is 1.741 units tall. The old 1.04 put
+// the eye 0.72 above the floor — 41% of the room's height, which is roughly
+// where your eyes are when you're SITTING. 1.42 is 63%, i.e. standing.
+// Both y values match so the opening gaze is level; move them together or the
+// view starts tilted.
+const CAMERA_EYE = new THREE.Vector3(0.3262, 1.42, -1.21);
+const CAMERA_TARGET = new THREE.Vector3(-0.4828, 1.42, 0.106);
 const CAMERA_FOV = 75;
 
 // Measured off the model in world space rather than guessed:
@@ -122,6 +128,65 @@ fillLight.position.set(-2.5, 1.5, -2);
 scene.add(fillLight);
 
 // ---------------------------------------------------------------- materials
+// Anisotropic filtering. THIS is what fixes textures looking smeared: without
+// it, any surface seen at a shallow angle — the floor ahead of you, a wall you
+// walk along — gets sampled from a far too small mipmap and turns to mush.
+// It costs nothing meaningful, changes no resolution, and doesn't touch the
+// retro look (that's RENDER_SCALE, which is a separate knob).
+const MAX_ANISOTROPY = renderer.capabilities.getMaxAnisotropy();
+
+// Nearest-neighbour magnification: up close you see hard texels instead of a
+// smeared gradient. This is the "pixely" look — and it's also what kills the
+// blur, since blur up close is just linear filtering interpolating between
+// texels.
+//
+// magFilter is Nearest but minFilter keeps its mipmaps. Turning mipmaps off
+// too would be the full crunch, but then every distant surface crawls and
+// fizzes as you walk, which reads as broken rather than retro. Mipmaps at
+// distance + hard texels up close is the combination that actually looks like
+// an old game instead of a bug.
+//
+// Press P in the scene to flip it live and compare.
+let PIXEL_TEXTURES = true;
+const allTextures = new Set();
+
+function applyFiltering(tex) {
+  tex.magFilter = PIXEL_TEXTURES ? THREE.NearestFilter : THREE.LinearFilter;
+  tex.minFilter = PIXEL_TEXTURES
+    ? THREE.NearestMipmapLinearFilter
+    : THREE.LinearMipmapLinearFilter;
+  tex.anisotropy = MAX_ANISOTROPY;
+  tex.needsUpdate = true;
+}
+
+function sharpen(tex) {
+  if (!tex || allTextures.has(tex)) return tex;
+  allTextures.add(tex);
+  applyFiltering(tex);
+  return tex;
+}
+
+function setPixelTextures(on) {
+  PIXEL_TEXTURES = on;
+  for (const t of allTextures) applyFiltering(t);
+  // The canvas renders below native (RENDER_SCALE) and the browser stretches
+  // it back up. Smooth stretching is the other half of the blur; pixelated
+  // stretching keeps the edges hard.
+  canvas.style.imageRendering = on ? "pixelated" : "auto";
+  console.info(`pixel textures: ${on ? "on" : "off"}`);
+}
+// Every map slot a material might carry.
+const MAP_SLOTS = [
+  "map", "alphaMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap",
+  "emissiveMap", "specularColorMap", "specularIntensityMap", "clearcoatMap",
+  "clearcoatNormalMap", "clearcoatRoughnessMap", "sheenColorMap", "bumpMap",
+];
+function sharpenAll(mat) {
+  if (!mat) return mat;
+  for (const slot of MAP_SLOTS) if (mat[slot]) sharpen(mat[slot]);
+  return mat;
+}
+
 // Unlit: the texture already contains the lighting.
 function toUnlit(src) {
   const m = new THREE.MeshBasicMaterial({
@@ -147,7 +212,7 @@ function toUnlit(src) {
     m.depthWrite = true;
   }
   m.name = src.name;
-  return m;
+  return sharpenAll(m);
 }
 
 // Lit: the hair. Deliberately does NOT rebuild the material — GLTFLoader
@@ -164,7 +229,7 @@ function toLit(src) {
   // erase strands drawn earlier. Not writing depth is what prevents that —
   // the cost is hair never occluding hair, which reads fine on soft strands.
   if (m.transparent) m.depthWrite = false;
-  return m;
+  return sharpenAll(m);
 }
 
 function toMirror() {
@@ -323,6 +388,11 @@ Object.entries({ "mc-w": "w", "mc-a": "a", "mc-s": "s", "mc-d": "d" }).forEach((
 
 // ---------------------------------------------------------------- pause menu
 window.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "p" || isPauseMenuOpen()) return;
+  setPixelTextures(!PIXEL_TEXTURES);
+});
+
+window.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (isPauseMenuOpen()) {
     if (getCurrentRoute() !== "home") navigate("home");
@@ -420,6 +490,8 @@ loader.load(
     initVinyl(model, camera, canvas);
 
     scene.environment = pmrem.fromScene(model, 0.02, 0.1, 40).texture;
+
+    setPixelTextures(PIXEL_TEXTURES);
 
     camera.position.copy(CAMERA_EYE);
     target.copy(CAMERA_TARGET);

@@ -221,6 +221,10 @@ function initUnlitLamps(model) {
 
 const LAMP_FLICKER_DEPTH = 0.06;  // how far the glow swings, 0..1
 const LAMP_JITTER_DEPTH = 0.025;  // the faster buzz on top
+// The flicker only ever DIMS. Letting k rise above 1 multiplies a baked lamp's
+// colour past white, which clips — and clipped white spreading over the bulb is
+// exactly what reads as a fake glow when you're standing next to it.
+const LAMP_FLICKER_CEILING = 1.0;
 
 // =========================================================== curtain
 const CURTAIN_MESH_PATTERN = /curtain/i;
@@ -347,7 +351,7 @@ export function updateAmbient(delta, elapsed, camera) {
     lamps.forEach((l) => {
       const slow = Math.sin(elapsed * l.speed + l.phase);
       const fast = Math.sin(elapsed * l.jitterSpeed + l.jitterPhase);
-      const k = 1 + slow * LAMP_FLICKER_DEPTH + fast * LAMP_JITTER_DEPTH;
+      const k = Math.min(LAMP_FLICKER_CEILING, 1 + slow * LAMP_FLICKER_DEPTH + fast * LAMP_JITTER_DEPTH);
       if (l.material.emissiveIntensity !== undefined) {
         l.material.emissiveIntensity = l.base * k;
       }
@@ -355,7 +359,7 @@ export function updateAmbient(delta, elapsed, camera) {
     unlitLamps.forEach((l) => {
       const slow = Math.sin(elapsed * l.speed + l.phase);
       const fast = Math.sin(elapsed * l.jitterSpeed + l.jitterPhase);
-      const k = 1 + slow * LAMP_FLICKER_DEPTH + fast * LAMP_JITTER_DEPTH;
+      const k = Math.min(LAMP_FLICKER_CEILING, 1 + slow * LAMP_FLICKER_DEPTH + fast * LAMP_JITTER_DEPTH);
       l.material.color.copy(l.baseColor).multiplyScalar(k);
     });
   } catch (err) {
