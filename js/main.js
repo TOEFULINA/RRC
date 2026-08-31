@@ -26,6 +26,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
 import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a3";
+import { initVinyl, updateVinyl } from "./vinyl.js";
 
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
@@ -409,6 +410,10 @@ loader.load(
     // need world transforms resolved.
     initAmbient(model, scene);
 
+    // Hover-to-peek on the records in the crate. Also after scene.add — it
+    // raycasts, which needs resolved world matrices.
+    initVinyl(model, camera, canvas);
+
     scene.environment = pmrem.fromScene(model, 0.02, 0.1, 40).texture;
 
     camera.position.copy(CAMERA_EYE);
@@ -455,6 +460,7 @@ function animate() {
     // Ambient returns the camera-breathing offset rather than moving the
     // camera itself, so this stays the only place camera.position is written
     // and the walk clamp can't fight it.
+    updateVinyl();
     const breath = updateAmbient(delta, clock.elapsedTime, camera);
     const restY = camera.position.y;
     const restRoll = camera.rotation.z;
