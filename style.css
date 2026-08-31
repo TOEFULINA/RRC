@@ -56,7 +56,9 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: #000;
+  /* Warm cream rather than black - it reads as the room's own light coming up
+     rather than a screen switching on, so the cut to the scene is softer. */
+  background: #e4d9c6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -64,20 +66,27 @@ html, body {
 }
 #loading-screen.hidden { opacity: 0; pointer-events: none; }
 .loading-inner { text-align: center; }
-.loading-title {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  text-transform: uppercase;
-  letter-spacing: .14em;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #f2ece2;
+/* The canvas's drawing buffer is 72x72; this stretches it to 240 and tells the
+   browser not to smooth it, which is where the chunky pixels come from. */
+#loading-spin {
+  display: block;
+  width: 240px;
+  height: 240px;
+  margin: 0 auto 20px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+@media (max-width: 520px) {
+  #loading-spin { width: 168px; height: 168px; }
 }
 .loading-sub {
-  margin-top: 12px;
+  margin-top: 4px;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  letter-spacing: .04em;
-  opacity: .5;
-  font-size: .8rem;
+  letter-spacing: .1em;
+  font-size: .95rem;
+  font-weight: 700;
+  color: #4a4034;
+  opacity: .75;
 }
 
 /* ---------- intro overlay (start menu) ---------- */

@@ -25,8 +25,9 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
-import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a3";
+import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01a4";
 import { initVinyl, updateVinyl } from "./vinyl.js";
+import { startLoaderSpin, stopLoaderSpin } from "./loaderSpin.js";
 
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
@@ -356,6 +357,10 @@ document.getElementById("pause-close-btn")?.addEventListener("click", () => {
 const loadingScreen = document.getElementById("loading-screen");
 const loadingSub = document.querySelector("#loading-screen .loading-sub");
 
+// Spin something on the loading screen while the room downloads.
+startLoaderSpin();
+if (loadingSub) loadingSub.textContent = "0%"; // so it never sits blank
+
 const draco = new DRACOLoader();
 draco.setDecoderPath("menu/draco/");
 const loader = new GLTFLoader();
@@ -422,6 +427,9 @@ loader.load(
     camera.lookAt(target);
 
     loadingScreen?.classList.add("hidden");
+    // Kept spinning through the fade, then torn down — a second live WebGL
+    // context is a real cost and it has no reason to exist after this.
+    setTimeout(stopLoaderSpin, 700);
     document.getElementById("mobile-controls")?.classList.add("show");
     document.getElementById("pause-open-btn")?.classList.add("show");
 

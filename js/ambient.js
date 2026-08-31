@@ -277,8 +277,8 @@ function initCurtain(model, scene) {
 // =========================================================== camera breathing
 // A very small idle bob. Enough that standing still doesn't feel like a
 // screenshot, small enough that you don't consciously notice it.
-const BREATH_AMPLITUDE = 0.007; // metres
-const BREATH_SPEED = 0.9;       // roughly a slow resting breath
+const BREATH_AMPLITUDE = 0.0028; // metres
+const BREATH_SPEED = 0.62;       // roughly a slow resting breath
 let breathOffset = 0;
 
 // =========================================================== public
