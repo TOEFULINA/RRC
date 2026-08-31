@@ -26,24 +26,11 @@
        wakes up on its own now (see startSeatedIntro in js/main.js), and
        the ported Skyrim pause menu (js/menu/) is the real navigation. -->
 
-  <div id="eyelid-top"></div>
-  <div id="eyelid-bottom"></div>
-
-  <div id="wake-subtitle"></div>
-
   <div id="mobile-controls">
     <button id="mc-w" class="mc-btn mc-w" aria-label="walk forward">&#9650;</button>
     <button id="mc-a" class="mc-btn mc-a" aria-label="walk left">&#9664;</button>
     <button id="mc-s" class="mc-btn mc-s" aria-label="walk back">&#9660;</button>
     <button id="mc-d" class="mc-btn mc-d" aria-label="walk right">&#9654;</button>
-  </div>
-
-  <!-- mobile-only prev/next for whatever's currently browsable (vinyl crate,
-       closet rack) — the touch equivalent of the ArrowLeft/ArrowRight keys,
-       only shown while one of those is actually focused (see main.js) -->
-  <div id="mobile-cycle-controls">
-    <button id="mc-cycle-prev" class="mc-cycle-btn" aria-label="previous">&#8249;</button>
-    <button id="mc-cycle-next" class="mc-cycle-btn" aria-label="next">&#8250;</button>
   </div>
 
   <canvas id="scene"></canvas>
@@ -54,23 +41,6 @@
        shows). -->
   <button id="pause-open-btn" aria-label="Open menu">Menu</button>
 
-  <!-- lightbox for viewing portfolio pieces -->
-  <div id="lightbox" class="hidden">
-    <div id="lightbox-backdrop"></div>
-    <div id="lightbox-card">
-      <button id="lightbox-close" aria-label="close">&times;</button>
-      <button id="lightbox-prev" aria-label="previous">&#8249;</button>
-      <div id="lightbox-media">
-        <canvas id="lightbox-canvas"></canvas>
-      </div>
-      <button id="lightbox-next" aria-label="next">&#8250;</button>
-      <div id="lightbox-info">
-        <div id="lightbox-kicker"></div>
-        <h2 id="lightbox-title"></h2>
-        <p id="lightbox-desc"></p>
-      </div>
-    </div>
-  </div>
 
   <!-- Skyrim-style pause menu — this is the ported compass-portfolio
        (see js/menu/). Hidden/inert until pauseState.js marks it open;
