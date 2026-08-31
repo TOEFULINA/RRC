@@ -311,6 +311,11 @@ const RAIN_LEN_MAX = 0.135;
 const RAIN_WIDTH_MIN = 0.0045;
 const RAIN_WIDTH_MAX = 0.0085;
 const RAIN_OPACITY = 0.85;
+// Drop colour. The streak texture is drawn pure white so this multiplies it
+// cleanly — change this one value and nothing else needs touching. A cool
+// green-grey sits close to the wet-foliage backdrop instead of punching out of
+// it the way near-white did.
+const RAIN_COLOR = 0x7c8b81;
 
 // The OUTSIDE bake is a bright sunny afternoon, which fights the rain harder
 // than any amount of drop contrast can win. Knocking it down and cooling it
@@ -335,9 +340,10 @@ function makeDropTexture() {
   c.width = W; c.height = H;
   const g = c.getContext("2d");
   const grad = g.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0.0, "rgba(228,240,255,0)");
-  grad.addColorStop(0.5, "rgba(228,240,255,1)");
-  grad.addColorStop(1.0, "rgba(228,240,255,0)");
+  // Pure white on purpose — RAIN_COLOR does the tinting.
+  grad.addColorStop(0.0, "rgba(255,255,255,0)");
+  grad.addColorStop(0.5, "rgba(255,255,255,1)");
+  grad.addColorStop(1.0, "rgba(255,255,255,0)");
   g.fillStyle = grad;
   // rounded-ish column: fade the sides too so it isn't a hard rectangle
   for (let x = 0; x < W; x++) {
@@ -396,6 +402,7 @@ function initRain(scene, model) {
       depthWrite: false,     // never occludes the view behind it
       depthTest: true,       // but the wall still hides it outside the opening
       opacity: RAIN_OPACITY,
+      color: new THREE.Color(RAIN_COLOR),
     });
     const sprite = new THREE.Sprite(mat);
     sprite.renderOrder = 4;  // above the backdrop, below glass (10) and curtains (20)

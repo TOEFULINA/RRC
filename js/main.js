@@ -22,7 +22,7 @@
 // Printed first thing so there is never any doubt about which build a page is
 // actually running. If this line is missing from the console, the browser is
 // serving cached or different files and nothing below has taken effect.
-console.info("%cBUILD rain-c2 — sprite rain + smallwalls alphaTest",
+console.info("%cBUILD rain-c3 — green-grey rain",
   "background:#123;color:#8fd;padding:2px 6px;border-radius:3px");
 
 import * as THREE from "three";
@@ -31,7 +31,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
-import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01c1";
+import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01c3";
 import { initVinyl, updateVinyl } from "./vinyl.js";
 import { startLoaderSpin, stopLoaderSpin } from "./loaderSpin.js";
 
