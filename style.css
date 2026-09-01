@@ -57,9 +57,8 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: 50;
-  /* Warm cream rather than black - it reads as the room's own light coming up
-     rather than a screen switching on, so the cut to the scene is softer. */
-  background: #e4d9c6;
+  /* No-signal TV blue. */
+  background: #0b3f96;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,14 +79,17 @@ html, body {
 @media (max-width: 520px) {
   #loading-spin { width: 168px; height: 168px; }
 }
+/* Kept in the DOM but normally empty: the percentage is gone, and this is now
+   only ever written to if the model fails to load, so a failure still says so
+   instead of leaving you on a blue screen forever. */
 .loading-sub {
   margin-top: 4px;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   letter-spacing: .1em;
   font-size: .95rem;
   font-weight: 700;
-  color: #4a4034;
-  opacity: .75;
+  color: #dbe6ff;
+  opacity: .9;
 }
 
 /* ---------- intro overlay (start menu) ---------- */

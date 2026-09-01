@@ -742,7 +742,6 @@ const loadingSub = document.querySelector("#loading-screen .loading-sub");
 
 // Spin something on the loading screen while the room downloads.
 startLoaderSpin();
-if (loadingSub) loadingSub.textContent = "0%"; // so it never sits blank
 
 const draco = new DRACOLoader();
 draco.setDecoderPath("menu/draco/");
@@ -841,11 +840,9 @@ loader.load(
 
     console.info(`room: ${unlit} unlit, ${lit} lit, ${mirrors} mirror, ${glass} glass, ${hidden} hidden.`);
   },
-  (evt) => {
-    if (loadingSub && evt.total) {
-      loadingSub.textContent = `${Math.round((evt.loaded / evt.total) * 100)}%`;
-    }
-  },
+  // No progress readout by design — the spinning shoe is the loading state.
+  // The handler stays so the loader still has a progress callback attached.
+  undefined,
   (err) => {
     console.error("failed to load the room model —", err);
     if (loadingSub) loadingSub.textContent = "couldn't load the room";

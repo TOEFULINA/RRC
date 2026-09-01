@@ -12,10 +12,11 @@
   transition: filter 0.35s ease;
 }
 body.paused #scene {
-  /* The frozen frame underneath the menu (see js/main.js's pause-open
-     snapshot) reads as "paused" via this blur/dim, same as the moody
-     blurred backdrop menu.css already gives every other screen. */
-  filter: blur(6px) brightness(0.55) saturate(0.85);
+  /* The frozen frame underneath the menu reads as "paused" via a blur. It
+     used to be dimmed to 55% as well, which fought the room — it's a bright,
+     sunlit space and crushing it that hard made the pause look like night.
+     The blur alone is enough to say "not live"; brightness stays near 1. */
+  filter: blur(5px) brightness(0.96) saturate(0.98);
 }
 
 body.paused #mobile-controls,
@@ -114,11 +115,10 @@ body.paused #pause-open-btn {
 
      #bg-layer   the paused still of the room. NOT inverted — it should keep
                  looking like the room.
-     #bg-overlay the vignette. It IS inverted. It's a black gradient, so
-                 flipping it gives a light one, and that is what the now-dark
-                 chrome sits on. Without this the type loses all its contrast
-                 against an unflipped backdrop — that was the problem with the
-                 first attempt.
+     #bg-overlay the vignette. Left alone. Inverting it turned the black
+                 gradient into a white wash over the room, which read as a haze
+                 sitting on top of the still — the backdrop is meant to look
+                 exactly like the room, and it now does.
      #app        the chrome. Inverted.
 
    invert() is paired with hue-rotate(180deg) throughout: a raw negative flips
@@ -131,6 +131,60 @@ body.paused #pause-open-btn {
 #pause-menu-root.menu-inverted #app canvas {
   filter: invert(1) hue-rotate(180deg);
 }
-#pause-menu-root.menu-inverted #bg-overlay {
-  filter: invert(1);
+
+/* ---- compass point labels: white ------------------------------------------
+   SKILLS / ITEMS / MAP / MAGIC.
+
+   The colour is stated twice on purpose. #app is run through
+   invert(1) hue-rotate(180deg) when the menu is inverted, so whatever colour
+   is authored here is flipped before you see it — asking for white would
+   render black. Under .menu-inverted the source colour is therefore BLACK,
+   which the filter turns into the white that was actually wanted. With the
+   inversion off (press I) the plain rule applies and white is just white.
+
+   Hover keeps its glow in both cases; the shadow is colour-flipped by the same
+   filter, so it's authored dark under inversion for the same reason. */
+#pause-menu-root #app .compass-point {
+  color: #ffffff;
+}
+#pause-menu-root #app .compass-point:hover,
+#pause-menu-root #app .compass-point:focus-visible {
+  color: #ffffff;
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.8);
+}
+
+#pause-menu-root.menu-inverted #app .compass-point {
+  color: #000000;
+}
+#pause-menu-root.menu-inverted #app .compass-point:hover,
+#pause-menu-root.menu-inverted #app .compass-point:focus-visible {
+  color: #000000;
+  text-shadow: 0 0 16px rgba(0, 0, 0, 0.8);
+}
+
+/* ---- pause backdrop: blur, don't dim -------------------------------------
+   menu.css gives #bg-overlay a radial black wash running to 0.65 at the
+   edges. That was tuned for the original static backdrop image; against a
+   still of this room it reads as a heavy vignette over a well-lit space.
+   Cut to a light touch — just enough to keep the compass off a busy
+   background, nothing like a dark mode. Raise the second number toward 0.65
+   to bring the old weight back. */
+#pause-menu-root #bg-overlay {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.08) 100%
+  );
+}
+
+/* The other half, and the one I missed first time: #bg-layer doesn't just show
+   the snapshot. menu.css stacks two dark radial gradients ON TOP of it —
+   rgba(80,70,50,.35) and rgba(30,40,35,.4) — because they were written as a
+   fallback wash for before any image is set, but they paint over the image
+   too. That was doing more dimming than the vignette was. Only the snapshot
+   is drawn now; the flat background-color covers the no-image case. */
+#pause-menu-root #bg-layer {
+  background-color: #2b2721;
+  background-image: var(--bg-image, none);
+  filter: blur(6px);
 }
