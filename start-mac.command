@@ -35,7 +35,29 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 
 echo "Starting local server with $PY at http://localhost:$PORT ..."
-"$PY" -m http.server "$PORT" &
+# Plain `python -m http.server` lets the browser cache modules, which is the
+# single most confusing thing that can happen while working on this site: you
+# edit a file, reload, and see the OLD code with no error to explain it.
+# index.html cache-busts the two entry scripts, but every module they import
+# (33 of them) has no version string, so those can stay cached indefinitely.
+# Serving everything with no-store makes a reload always mean a reload.
+"$PY" - "$PORT" <<'PYEOF' &
+import sys, functools, http.server, socketserver
+
+class NoCache(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
+port = int(sys.argv[1])
+socketserver.TCPServer.allow_reuse_address = True
+# binds 0.0.0.0, so the same URL works from a phone on the same wifi using the
+# Mac's LAN IP (ipconfig getifaddr en0)
+with socketserver.TCPServer(("", port), NoCache) as httpd:
+    httpd.serve_forever()
+PYEOF
 SERVER_PID=$!
 
 # give it a moment, then confirm it's actually up before opening the browser
