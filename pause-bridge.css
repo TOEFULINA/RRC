@@ -105,6 +105,15 @@ body.paused #pause-open-btn {
     font-size: 0.65rem;
     padding: 0.5em 0.9em;
   }
+  /* MENU moves to the top-right on phones, landing exactly where RESUME sits
+     — so the button you press to open the menu and the button you press to
+     leave it are the same spot, and opening/closing doesn't make your thumb
+     travel the height of the screen. Bottom-right is also where the d-pad
+     lives on mobile, which made that corner crowded. */
+  #pause-open-btn {
+    top: max(16px, env(safe-area-inset-top, 0px));
+    bottom: auto;
+  }
 }
 
 /* ---- inverted menu ---------------------------------------------------------

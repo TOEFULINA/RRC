@@ -522,7 +522,12 @@ label[for],
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  /* flex-START, not flex-end. The viewer is capped at 76% of the column, so
+     there is always leftover space — packing to the end put ALL of it above
+     the model and stranded the info card down at the bottom of the screen,
+     nowhere near the thing it describes. Packing to the start keeps the card
+     directly under the model and lets the slack fall below both. */
+  justify-content: flex-start;
   gap: clamp(0.75rem, 3vw, 1.5rem);
   /* extra bottom padding to clear the nav bar, now fixed at the bottom of
      the screen instead of the top */
@@ -904,6 +909,19 @@ label[for],
 
    (cqw = 1% of the container's inline size; .info-card is the container.) */
 @media (max-width: 860px) {
+  /* Same reason as .detail-col above: the card follows the model, and any
+     spare height goes underneath rather than between them. */
+  .detail-col {
+    justify-content: flex-start;
+  }
+  .item-viewer {
+    /* Must still GROW (flex:1), just capped. With flex:0 it fell back to its
+       160px min-height and the model shrank to a thumbnail with a screen of
+       dead space underneath. The cap is what creates the slack below the card
+       instead of between the model and the card. */
+    flex: 1 1 auto;
+    max-height: 62%;
+  }
   .info-card {
     container-type: inline-size;
     /* desktop shape restored — this is what was being discarded */
