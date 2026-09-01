@@ -256,3 +256,28 @@ body {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
+
+/* ---- pixelated selector panels --------------------------------------------
+   The connector glyph (the ornate arrow between the columns) is baked into
+   the "-selected" panel art rather than being its own asset, so pixelating
+   the glyph means pixelating these. Sources are ~1.6x downsamples, matching
+   the rose and info card.
+
+   The unselected panels get the same treatment even though they carry no
+   glyph — otherwise the border weight would visibly change the moment a
+   column took focus.
+
+   Originals untouched; delete this block to undo. */
+#pause-menu-root .category-col          { background-image: url("/menu/ui/l-slim-px.png"); }
+#pause-menu-root .category-col.focused  { background-image: url("/menu/ui/l-slim-selected-px.png"); }
+#pause-menu-root .list-col              { background-image: url("/menu/ui/l-wide-px.png"); }
+#pause-menu-root .list-col.focused      { background-image: url("/menu/ui/l-wide-selected-px.png"); }
+#pause-menu-root .mirrored .category-col         { background-image: url("/menu/ui/r-slim-px.png"); }
+#pause-menu-root .mirrored .category-col.focused { background-image: url("/menu/ui/r-slim-selected-px.png"); }
+#pause-menu-root .mirrored .list-col             { background-image: url("/menu/ui/r-wide-px.png"); }
+#pause-menu-root .mirrored .list-col.focused     { background-image: url("/menu/ui/r-wide-selected-px.png"); }
+#pause-menu-root .category-col,
+#pause-menu-root .list-col {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}

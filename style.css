@@ -321,36 +321,24 @@ html, body {
   user-select: none;
 }
 
-/* One arrow, built cell by cell out of box-shadows: a 4-row triangle on a 3px
-   grid, 1-3-5-7 cells wide. The element itself is the top cell; every other
-   cell is a shadow offset in whole multiples of the grid, so nothing can land
-   on a half-pixel and go soft. The three other directions are this same shape
-   rotated, which keeps them pixel-identical instead of hand-drawn four times. */
+/* A clean geometric triangle, clipped rather than built out of pixel cells.
+   The stepped 1-3-5-7 grid version read as chunky against everything else on
+   screen; a hard-edged solid triangle keeps the same flat, constructed feel
+   without the staircase. The square bevelled key around it is what carries the
+   8-bit character — the arrow just has to be a crisp shape.
+
+   One shape, rotated for the other three, so all four stay identical. */
 .mc-btn::before {
   content: "";
   position: absolute;
-  width: 3px;
-  height: 3px;
-  background: currentColor;
-  /* The shape is 19x12 with its top cell here, so its visual centre sits at
-     (1.5px, 6px) from this cell's top-left. Both the placement and the
-     rotation pivot use that point — pivoting on the cell instead (the obvious
-     50% 50%) swings the triangle around its tip, which threw the left, right
-     and down arrows off-centre while up looked fine. */
   left: 50%;
   top: 50%;
-  margin: -6px 0 0 -1.5px;
-  transform-origin: 1.5px 6px;
-  box-shadow:
-    /* row 2 */
-    -3px 3px 0 currentColor, 0 3px 0 currentColor, 3px 3px 0 currentColor,
-    /* row 3 */
-    -6px 6px 0 currentColor, -3px 6px 0 currentColor, 0 6px 0 currentColor,
-    3px 6px 0 currentColor, 6px 6px 0 currentColor,
-    /* row 4 */
-    -9px 9px 0 currentColor, -6px 9px 0 currentColor, -3px 9px 0 currentColor,
-    0 9px 0 currentColor, 3px 9px 0 currentColor, 6px 9px 0 currentColor,
-    9px 9px 0 currentColor;
+  width: 16px;
+  height: 12px;
+  margin: -6px 0 0 -8px;
+  background: currentColor;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  transform-origin: 50% 50%;
 }
 .mc-w::before { transform: rotate(0deg); }
 .mc-d::before { transform: rotate(90deg); }
