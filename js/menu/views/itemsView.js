@@ -3,7 +3,7 @@ import { renderTopNav } from "./topNav.js";
 // Versioned import: index.html only cache-busts the ENTRY points, so a
 // sub-module like this one can sit in the browser cache indefinitely and
 // silently keep serving old code. Bump when modelViewer.js changes.
-import { mountModelViewer } from "../three/modelViewer.js?v=2026-09-01lights";
+import { mountModelViewer } from "../three/modelViewer.js?v=2026-09-01clear";
 import { navigate } from "../router.js";
 import { fitTextToOneLine } from "../utils/fitTextToOneLine.js";
 import {
@@ -36,8 +36,17 @@ function escapeHtml(str) {
 // screen: clicking a row also moves keyboard focus there, so the two
 // stay in sync.
 
+// Categories listed here are dropped from the rail AND from "All", so their
+// items are unreachable rather than just unlisted. Delete a name to bring the
+// category back — nothing in items.js needs touching either way.
+const HIDDEN_CATEGORIES = ["Action Figures"];
+
+function isVisible(i) {
+  return !HIDDEN_CATEGORIES.includes(i.category);
+}
+
 function getCategories() {
-  const unique = [...new Set(items.map((i) => i.category))];
+  const unique = [...new Set(items.filter(isVisible).map((i) => i.category))];
   return ["All", ...unique];
 }
 
@@ -46,7 +55,8 @@ function getCategories() {
 // is sorted alphabetically by name within whichever category is selected,
 // "All" included.
 function itemsInCategory(cat) {
-  const list = cat === "All" ? items : items.filter((i) => i.category === cat);
+  const visible = items.filter(isVisible);
+  const list = cat === "All" ? visible : visible.filter((i) => i.category === cat);
   return [...list].sort((a, b) => a.name.localeCompare(b.name));
 }
 

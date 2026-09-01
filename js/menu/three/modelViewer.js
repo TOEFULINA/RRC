@@ -311,17 +311,30 @@ export function mountModelViewer(
         const glass = new THREE.MeshPhysicalMaterial({
           color: 0xffffff,
           metalness: 0,
-          roughness: 0.06,
-          transmission: 0.65,
-          thickness: 0.2,
-          ior: 1.49, // acrylic/PET — real glass runs closer to 1.5, plastic case a touch lower
+          roughness: 0.03,
+          // FULL transmission. At 0.65 the remaining 35% still rendered as
+          // opaque white diffuse, which is what made the case look milky
+          // rather than clear.
+          transmission: 1.0,
+          // Thin, and with attenuation effectively switched off (white tint,
+          // a long distance). The old 0.2 thickness with a blue-white
+          // attenuationColor was actively dyeing the case pale blue.
+          thickness: 0.04,
+          attenuationColor: 0xffffff,
+          attenuationDistance: 1000,
+          ior: 1.49, // acrylic — real glass is nearer 1.5
           specularIntensity: 1,
           specularColor: 0xffffff,
-          clearcoat: 0.8,
-          clearcoatRoughness: 0.05,
-          attenuationColor: 0xdcefff,
-          attenuationDistance: 1.4,
-          envMapIntensity: 2.0,
+          // No clearcoat. On top of a fully transmissive surface it only adds
+          // a broad white sheen, which reads as haze on the panel faces.
+          clearcoat: 0,
+          envMapIntensity: 1.0,
+          // Transmission is rendered in its own pass, NOT the transparent
+          // queue. GLTFLoader had this material as BLEND with a 0.25 base
+          // alpha, so it was ALSO being alpha-blended at 25% opacity — a
+          // second, unwanted layer of white on top of the transmission.
+          transparent: false,
+          opacity: 1,
           side: THREE.DoubleSide,
         });
         glass.name = m.name;
