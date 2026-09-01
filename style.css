@@ -49,7 +49,8 @@ html, body {
   touch-action: none;
 }
 #scene:active { cursor: grabbing; }
-#scene.hovering { cursor: pointer; }
+#scene.hovering,
+#scene.hovering-seat { cursor: pointer; }
 
 /* ---------- loading screen ---------- */
 #loading-screen {

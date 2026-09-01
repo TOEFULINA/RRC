@@ -886,27 +886,42 @@ label[for],
   }
 }
 
-/* Mobile only: .info-card's aspect-ratio (locked to the wide banner art's
-   own shape) is what keeps it short-and-wide on desktop — but on a narrow
-   phone screen, the same aspect-ratio against a much narrower box works
-   out to a much SHORTER box too, too short to fit a 3-stat row plus a
-   description without clipping (the card clips its own overflow). There's
-   no separate taller art asset, so instead the aspect-ratio is dropped
-   here and the card is allowed to grow to whatever height its content
-   actually needs — the background art stretches to match (a mild, mostly
-   unnoticeable stretch of the corner motif) rather than the text getting
-   cut off. .item-viewer above it is a flexible flex child, so it simply
-   yields the extra space rather than anything overlapping or scrolling. */
+/* Mobile: the info card as a SCALED-DOWN COPY of the desktop one, not a
+   re-flowed version of it.
+
+   What was here before deliberately threw away the aspect-ratio and let the
+   card grow to whatever height its content needed. That kept the text from
+   clipping vertically, but it also meant the phone never looked like the
+   desktop layout — and it didn't stop the clipping anyway, because .info-name
+   and .item-description are both nowrap+ellipsis and so clip HORIZONTALLY on a
+   narrow card no matter how tall it gets.
+
+   The fix is to keep the desktop shape and size the type off THE CARD'S OWN
+   WIDTH rather than the viewport. Every value below is the desktop pixel size
+   divided by the card's 500px desktop width, expressed in cqw — so at 500px
+   this renders identically to desktop, and at 320px it's the same layout at
+   64% scale. Nothing reflows, nothing clips, the proportions are fixed.
+
+   (cqw = 1% of the container's inline size; .info-card is the container.) */
 @media (max-width: 860px) {
   .info-card {
-    aspect-ratio: unset;
+    container-type: inline-size;
+    /* desktop shape restored — this is what was being discarded */
+    aspect-ratio: 4279 / 1847;
+    width: min(500px, 96%);
     height: auto;
     max-height: none;
   }
   .info-card-inner {
-    height: auto;
-    padding: 6% 7%;
+    height: 100%;
+    padding: 7% 8%;
+    gap: 1.44cqw;      /* 0.45rem at 500px */
   }
+  .info-name        { font-size: 4.48cqw; }  /* 1.4rem  */
+  .stat-label       { font-size: 2.30cqw; }  /* 0.72rem */
+  .stat-list li span:last-child { font-size: 4.16cqw; }  /* 1.3rem */
+  .item-description { font-size: 2.56cqw; }  /* 0.8rem  */
+  .stat-list        { gap: 0.96cqw 8cqw; }   /* 0.3rem / 2.5rem */
 }
 
 /* ---------- skills: constellation carousel ---------- */

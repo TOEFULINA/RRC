@@ -29,13 +29,18 @@ import { isPauseMenuOpen } from "./pauseState.js";
 const VINYL_PATTERN = /^vinyl[ _]?\d+$/i;
 
 const HOVER_RISE = 0.085;  // metres the record lifts out of the crate
+// A clicked record comes all the way out, so the camera has a clear cover to
+// frame rather than something still half-buried in the crate.
+const SELECT_RISE = 0.26;
 const RISE_LERP = 0.14;    // per-frame approach to the target height
 const DRAG_SLOP = 6;       // px of movement before a pointer counts as a look-drag
 
 const records = [];
+const hitTargets = [];
 let raycaster = null;
 let pointer = null;
 let hovered = null;
+let selected = null;
 let dragging = false;
 let downAt = null;
 let cam = null;
@@ -50,7 +55,6 @@ export function initVinyl(model, camera, canvas) {
   // Every mesh belonging to a record is raycastable, but they all lift the one
   // object that carries the transform — moving a single primitive out of a
   // multi-primitive record would tear it in half.
-  const targets = [];
   const byMover = new Map();
 
   model.traverse((obj) => {
@@ -61,7 +65,7 @@ export function initVinyl(model, camera, canvas) {
     if (!onSelf && !VINYL_PATTERN.test(obj.parent?.name || "")) return;
     const mover = onSelf ? obj : obj.parent;
     obj.userData.vinylMover = mover;
-    targets.push(obj);
+    hitTargets.push(obj);
     if (!byMover.has(mover)) {
       byMover.set(mover, { mover, baseY: mover.position.y, targetY: mover.position.y });
       records.push(byMover.get(mover));
@@ -96,7 +100,7 @@ export function initVinyl(model, camera, canvas) {
     pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, cam);
-    const hits = raycaster.intersectObjects(targets, false);
+    const hits = raycaster.intersectObjects(hitTargets, false);
     setHovered(hits.length ? hits[0].object.userData.vinylMover : null);
   });
 
@@ -105,18 +109,61 @@ export function initVinyl(model, camera, canvas) {
   console.info(`vinyl hover: ${records.length} record(s) wired.`);
 }
 
-function setHovered(mover) {
-  if (mover === hovered) return;
-  hovered = mover;
+// A selected record outranks hover: it stays fully out until it is deselected,
+// wherever the pointer goes.
+export function setVinylSelected(mover) {
+  selected = mover || null;
+  applyRise();
+}
+
+// Where a record WILL be once it has finished rising, not where it is now.
+// The rise is animated over ~20 frames, so a camera pose computed from the
+// live position frames the empty slot in the crate and the record then lifts
+// straight out of shot. This returns the settled centre so the snap lands on
+// the cover.
+export function vinylFocusBox(mover) {
+  const box = new THREE.Box3().setFromObject(mover);
+  const centre = box.getCenter(new THREE.Vector3());
+  const rec = records.find((r) => r.mover === mover);
+  if (rec) {
+    const s = new THREE.Vector3();
+    (mover.parent || mover).getWorldScale(s);
+    const risenLocal = rec.baseY + SELECT_RISE / (s.y || 1);
+    centre.y += (risenLocal - mover.position.y) * (s.y || 1);
+  }
+  return { centre, size: box.getSize(new THREE.Vector3()) };
+}
+
+// Hit-test at a screen point. Exported so main.js can decide what a click
+// means without duplicating the raycast.
+export function pickVinyl(clientX, clientY) {
+  if (!raycaster || !cnv) return null;
+  const rect = cnv.getBoundingClientRect();
+  pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, cam);
+  const hits = raycaster.intersectObjects(hitTargets, false);
+  return hits.length ? hits[0].object.userData.vinylMover : null;
+}
+
+function applyRise() {
   for (const r of records) {
     // position is in the PARENT's space, so a world-space rise converts
     // through the PARENT's world scale, not the record's own.
     const s = new THREE.Vector3();
     (r.mover.parent || r.mover).getWorldScale(s);
-    const rise = r.mover === hovered ? HOVER_RISE / (s.y || 1) : 0;
-    r.targetY = r.baseY + rise;
+    const want =
+      r.mover === selected ? SELECT_RISE :
+      r.mover === hovered ? HOVER_RISE : 0;
+    r.targetY = r.baseY + want / (s.y || 1);
   }
   cnv?.classList.toggle("hovering", !!hovered);
+}
+
+function setHovered(mover) {
+  if (mover === hovered) return;
+  hovered = mover;
+  applyRise();
 }
 
 export function updateVinyl() {

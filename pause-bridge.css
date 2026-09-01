@@ -105,3 +105,32 @@ body.paused #pause-open-btn {
     padding: 0.5em 0.9em;
   }
 }
+
+/* ---- inverted menu ---------------------------------------------------------
+   Press I in the room to toggle.
+
+   Three elements, three different treatments, because they are three different
+   kinds of thing:
+
+     #bg-layer   the paused still of the room. NOT inverted — it should keep
+                 looking like the room.
+     #bg-overlay the vignette. It IS inverted. It's a black gradient, so
+                 flipping it gives a light one, and that is what the now-dark
+                 chrome sits on. Without this the type loses all its contrast
+                 against an unflipped backdrop — that was the problem with the
+                 first attempt.
+     #app        the chrome. Inverted.
+
+   invert() is paired with hue-rotate(180deg) throughout: a raw negative flips
+   hue as well as lightness, so the warm parchment would turn electric blue.
+   The hue-rotate puts the hues back, giving a tonal flip in the same palette.
+
+   The 3D canvases get the filter a second time, which cancels it exactly, so
+   the portfolio objects keep looking like themselves. */
+#pause-menu-root.menu-inverted #app,
+#pause-menu-root.menu-inverted #app canvas {
+  filter: invert(1) hue-rotate(180deg);
+}
+#pause-menu-root.menu-inverted #bg-overlay {
+  filter: invert(1);
+}

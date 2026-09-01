@@ -99,7 +99,7 @@ export function mountModelViewer(
   renderer.setSize(width, height);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.75;
+  renderer.toneMappingExposure = 0.98; // was 0.75 — overall brightness
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -201,11 +201,26 @@ export function mountModelViewer(
   // More ambient fill relative to the key light narrows the gap between a
   // model's lit and shadowed sides, which reads as softer overall lighting
   // without needing actual shadow-casting.
-  scene.add(new THREE.AmbientLight(0xffffff, 0.32));
-  const key = new THREE.DirectionalLight(0xfff3e0, 0.55);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.46));
+
+  // The main light is PARENTED TO THE CAMERA, so it always arrives from
+  // wherever you're looking. The world-space key below stays for shape, but on
+  // its own it meant the lit side of an object stayed put while the object
+  // swung through it as you orbited — half of every turn was spent looking at
+  // the model's shadowed side. A camera-mounted light can't go dark on you.
+  const headlight = new THREE.DirectionalLight(0xffffff, 0.85);
+  headlight.position.set(0, 0, 1); // in camera space: straight down the lens
+  camera.add(headlight);
+  // A light only contributes if its whole chain is in the scene graph, and the
+  // camera normally isn't — this is what actually switches the headlight on.
+  scene.add(camera);
+
+  // Kept, but lowered: it's now shaping on top of the headlight rather than
+  // doing the lighting by itself, and slightly off-axis so edges still read.
+  const key = new THREE.DirectionalLight(0xfff3e0, 0.35);
   key.position.set(3, 5, 4);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x9fb8ff, 0.28);
+  const rim = new THREE.DirectionalLight(0x9fb8ff, 0.3);
   rim.position.set(-4, 2, -3);
   scene.add(rim);
 
