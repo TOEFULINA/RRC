@@ -3,7 +3,7 @@ import { renderTopNav } from "./topNav.js";
 // Versioned import: index.html only cache-busts the ENTRY points, so a
 // sub-module like this one can sit in the browser cache indefinitely and
 // silently keep serving old code. Bump when modelViewer.js changes.
-import { mountModelViewer } from "../three/modelViewer.js?v=2026-09-01clear";
+import { mountModelViewer } from "../three/modelViewer.js?v=2026-09-01clear3";
 import { navigate } from "../router.js";
 import { fitTextToOneLine } from "../utils/fitTextToOneLine.js";
 import {

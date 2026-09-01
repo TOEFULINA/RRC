@@ -302,15 +302,61 @@ const BREATH_SPEED = 0.62;       // roughly a slow resting breath
 // They live in the 15mm slot between the wall's outer face (z = -1.872) and
 // the OUTSIDE backdrop (z = -1.887), so the wall occludes them and you only
 // ever see them through the window opening.
+//
+// FLATNESS. Doubling the drop count on its own does not fix "it looks like a
+// waterfall" — it makes a denser waterfall. The reason it read as a flat sheet
+// is that every drop was the same size, falling at nearly the same speed,
+// dead vertical, inside a 12mm slot. Nothing was nearer or further than
+// anything else, and parallel lines at one scale IS a sheet.
+//
+// The slot can't be widened — beyond z = -1.887 the backdrop hides the drops
+// and in front of -1.872 the wall does — so the depth is faked with the cues
+// that actually carry it on screen anyway:
+//   - three layers, near ones distinctly longer/thicker/faster/brighter than
+//     far ones, so the eye sorts them into planes
+//   - a slant, with each drop drifting sideways to match its own tilt, so the
+//     streaks aren't parallel and the far ones lean less than the near ones
+//   - a wide speed spread inside each layer
 const RAIN_ENABLED = true;
-const RAIN_COUNT = 220;          // drops. This is "pouring".
-const RAIN_FALL_MIN = 1.9;       // metres/sec
-const RAIN_FALL_MAX = 3.4;
-const RAIN_LEN_MIN = 0.055;      // metres — a drop is a motion-blurred streak
-const RAIN_LEN_MAX = 0.135;
-const RAIN_WIDTH_MIN = 0.0045;
-const RAIN_WIDTH_MAX = 0.0085;
-const RAIN_OPACITY = 0.85;
+const RAIN_COUNT = 420;          // was 220. ~420 sprites = ~420 draw calls; on
+                                 // the phone this measured cheaper than the
+                                 // chair raycast that got cut, but if anything
+                                 // ever does get tight this is the one number
+                                 // to pull down.
+const RAIN_FALL_MIN = 0.85;      // metres/sec, before the layer multiplier
+const RAIN_FALL_MAX = 1.9;
+const RAIN_LEN_MIN = 0.028;      // metres. Short streaks: a drizzle drop is a
+const RAIN_LEN_MAX = 0.075;      // speck, a downpour drop is a line
+const RAIN_WIDTH_MIN = 0.0035;
+const RAIN_WIDTH_MAX = 0.0075;
+const RAIN_OPACITY = 0.55;
+
+// Rain runs on its own low frame rate. This is the "make it drizzle" knob and
+// it does more than the speed does: at 12 steps a second the drops advance in
+// visible increments instead of gliding, which reads as a fine scattered
+// drizzle rather than a sheet of water moving past the window — and it sits
+// with the nearest-neighbour textures everywhere else in the room rather than
+// being the one perfectly smooth thing on screen. Set it high (60+) to go back
+// to continuous motion.
+const RAIN_STEP_HZ = 12;
+
+// Slant. Screen-space tilt on the sprite, paired with a matching sideways
+// drift so a drop travels the direction it points — a leaning streak moving
+// straight down is worse than no lean at all.
+const RAIN_SLANT = 0.035;        // radians at full strength (~2°). Was 6°,
+                                 // which past a certain drop count stops
+                                 // reading as wind and starts reading as the
+                                 // whole window being tilted.
+const RAIN_SLANT_JITTER = 0.6;   // fraction of RAIN_SLANT each drop varies by
+
+// The three depth planes: [share of drops, scale x, speed x, opacity x, z].
+// Near drops are big, fast, bright and lean hardest; far ones are small, slow,
+// faint and near-vertical, which is how distance actually looks.
+const RAIN_LAYERS = [
+  { share: 0.30, scale: 1.45, speed: 1.30, opacity: 1.00, slant: 1.00, z: -1.874 },
+  { share: 0.36, scale: 1.00, speed: 1.00, opacity: 0.72, slant: 0.65, z: -1.880 },
+  { share: 0.34, scale: 0.62, speed: 0.74, opacity: 0.46, slant: 0.30, z: -1.886 },
+];
 // Drop colour. The streak texture is drawn pure white so this multiplies it
 // cleanly — change this one value and nothing else needs touching. A cool
 // green-grey sits close to the wet-foliage backdrop instead of punching out of
@@ -332,6 +378,7 @@ const RAIN_BOTTOM = 0.62;
 const RAIN_Z = [-1.886, -1.874];
 
 const rainDrops = [];
+let rainAccum = 0;
 
 // One soft vertical streak, drawn once and shared by every drop.
 function makeDropTexture() {
@@ -375,16 +422,34 @@ function applyOvercast(model) {
 }
 
 function seedDrop(d, atTop) {
+  const L = d.layer;
+  // Spawn a little wider than the layer's slant can carry a drop sideways over
+  // its fall, so drops still lean in from off-frame instead of the windward
+  // edge going bare.
+  const overhang = Math.abs(d.vx || 0) * 0.8;
   d.sprite.position.set(
-    RAIN_X[0] + Math.random() * (RAIN_X[1] - RAIN_X[0]),
+    RAIN_X[0] - overhang + Math.random() * (RAIN_X[1] - RAIN_X[0] + overhang * 2),
     atTop ? RAIN_TOP : RAIN_BOTTOM + Math.random() * (RAIN_TOP - RAIN_BOTTOM),
-    RAIN_Z[0] + Math.random() * (RAIN_Z[1] - RAIN_Z[0])
+    // Each layer keeps its own depth, with a hair of jitter so three hard
+    // planes don't become three visible sheets instead of one.
+    L.z + (Math.random() - 0.5) * 0.0015
   );
-  d.speed = RAIN_FALL_MIN + Math.random() * (RAIN_FALL_MAX - RAIN_FALL_MIN);
-  const len = RAIN_LEN_MIN + Math.random() * (RAIN_LEN_MAX - RAIN_LEN_MIN);
-  const wid = RAIN_WIDTH_MIN + Math.random() * (RAIN_WIDTH_MAX - RAIN_WIDTH_MIN);
+
+  d.speed = (RAIN_FALL_MIN + Math.random() * (RAIN_FALL_MAX - RAIN_FALL_MIN)) * L.speed;
+
+  const len = (RAIN_LEN_MIN + Math.random() * (RAIN_LEN_MAX - RAIN_LEN_MIN)) * L.scale;
+  const wid = (RAIN_WIDTH_MIN + Math.random() * (RAIN_WIDTH_MAX - RAIN_WIDTH_MIN)) * L.scale;
   d.sprite.scale.set(wid, len, 1);
-  d.sprite.material.opacity = RAIN_OPACITY * (0.45 + Math.random() * 0.55);
+
+  // Tilt, and the drift that makes the tilt honest. All drops lean the same
+  // way — it's one wind, not turbulence — with per-drop jitter on how much.
+  const tilt = RAIN_SLANT * L.slant *
+    (1 - RAIN_SLANT_JITTER + Math.random() * RAIN_SLANT_JITTER * 2);
+  d.sprite.material.rotation = tilt;
+  d.vx = Math.tan(tilt) * d.speed;
+
+  d.sprite.material.opacity =
+    RAIN_OPACITY * L.opacity * (0.55 + Math.random() * 0.45);
 }
 
 function initRain(scene, model) {
@@ -393,7 +458,20 @@ function initRain(scene, model) {
   applyOvercast(model);
 
   const tex = makeDropTexture();
-  for (let i = 0; i < RAIN_COUNT; i++) {
+
+  // Expand the layer shares into one entry per drop, then shuffle, so the
+  // layers interleave in the scene graph rather than rendering as three
+  // consecutive banks.
+  const plan = [];
+  RAIN_LAYERS.forEach((L) => {
+    for (let n = 0; n < Math.round(RAIN_COUNT * L.share); n++) plan.push(L);
+  });
+  for (let i = plan.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [plan[i], plan[j]] = [plan[j], plan[i]];
+  }
+
+  for (let i = 0; i < plan.length; i++) {
     // Per-drop material so each can carry its own opacity; they all share the
     // one texture, so this stays cheap.
     const mat = new THREE.SpriteMaterial({
@@ -407,7 +485,7 @@ function initRain(scene, model) {
     const sprite = new THREE.Sprite(mat);
     sprite.renderOrder = 4;  // above the backdrop, below glass (10) and curtains (20)
     sprite.name = `__raindrop${i}`;
-    const d = { sprite, speed: 0 };
+    const d = { sprite, speed: 0, vx: 0, layer: plan[i] };
     seedDrop(d, false);
     scene.add(sprite);
     rainDrops.push(d);
@@ -531,10 +609,22 @@ export function updateAmbient(delta, elapsed, camera) {
 
   // ---- rain ----
   try {
-    for (const d of rainDrops) {
-      d.sprite.position.y -= d.speed * delta;
-      if (d.sprite.position.y < RAIN_BOTTOM) seedDrop(d, true);
+    // Advance in fixed chunks, not by the real frame delta, so the motion is
+    // quantised to RAIN_STEP_HZ regardless of what the room is running at.
+    // The while loop means a long frame still moves the rain the right total
+    // distance rather than dropping it.
+    const step = 1 / RAIN_STEP_HZ;
+    rainAccum += delta;
+    let guard = 8; // never spend a slow frame catching up on rain
+    while (rainAccum >= step && guard-- > 0) {
+      rainAccum -= step;
+      for (const d of rainDrops) {
+        d.sprite.position.y -= d.speed * step;
+        d.sprite.position.x += d.vx * step;
+        if (d.sprite.position.y < RAIN_BOTTOM) seedDrop(d, true);
+      }
     }
+    if (guard <= 0) rainAccum = 0;
   } catch (err) {
     console.error("rain: disabled —", err);
     rainDrops.length = 0;

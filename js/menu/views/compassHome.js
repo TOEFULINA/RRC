@@ -1,5 +1,4 @@
-import { COMPASS_DIRECTIONS, MAP_EXTERNAL_URL } from "../config.js";
-import { setPauseMenuOpen } from "../../pauseState.js";
+import { COMPASS_DIRECTIONS } from "../config.js";
 import { navigate } from "../router.js";
 import { cameFromToefulina, goBackToReferrer } from "../utils/referrer.js";
 
@@ -42,16 +41,12 @@ export function renderCompassHome(container) {
   `;
 
   el.querySelectorAll("[data-route]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      // Map returns you to the room instead of leaving the site (was:
-      // an external link in the standalone compass site this was
-      // ported from - same change as main.js's arrow-key handler).
-      if (btn.dataset.route === COMPASS_DIRECTIONS.bottom.key) {
-        setPauseMenuOpen(false);
-        return;
-      }
-      navigate(btn.dataset.route);
-    });
+    // All four points route now. Map used to be the odd one out twice over:
+    // an external shop link in the standalone compass site this was ported
+    // from, then a "close the menu" shortcut while there was no map to show.
+    // There is one now, so it behaves like its three neighbours. RESUME in the
+    // corner is still the way back to the room.
+    btn.addEventListener("click", () => navigate(btn.dataset.route));
   });
 
   // Only rendered at all when the visitor actually arrived via a link from

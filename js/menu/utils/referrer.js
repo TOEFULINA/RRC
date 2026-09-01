@@ -1,5 +1,3 @@
-import { MAP_EXTERNAL_URL } from "../config.js";
-
 // Captured once at module load (this module is imported once, at app
 // startup) rather than read fresh from document.referrer wherever it's
 // needed — document.referrer reflects whichever page originally linked
@@ -9,9 +7,10 @@ import { MAP_EXTERNAL_URL } from "../config.js";
 // clicked around the site for a while.
 const REFERRER = document.referrer;
 
-// Derived from MAP_EXTERNAL_URL rather than a separately hardcoded string,
-// so the two stay in sync if that URL's domain ever changes.
-const TOEFULINA_HOST = new URL(MAP_EXTERNAL_URL).hostname.replace(/^www\./, "");
+// The site this room is linked from. Used to be derived from config's
+// MAP_EXTERNAL_URL, which went away when the compass's Map point stopped being
+// an external shop link and became the actual map screen.
+const TOEFULINA_HOST = "toefulina.com";
 
 function hostOf(url) {
   try {

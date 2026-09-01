@@ -1209,3 +1209,101 @@ label[for],
 }
 
 } /* end @scope (#pause-menu-root) part 2 */
+
+/* ---------- map: 3D relief of the US ---------- */
+/* Full-screen and opaque — this screen is its own world, not an overlay on the
+   paused room. The canvas paints the haze colour itself; this just makes sure
+   nothing shows through around it. */
+.map-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  background: #8fa0ad; /* matches FOG_COLOR in usMap.js */
+}
+.map-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  cursor: grab;
+  touch-action: none; /* the canvas handles its own pan/zoom */
+}
+.map-stage:active { cursor: grabbing; }
+.map-stage canvas { display: block; width: 100%; height: 100%; }
+
+/* Vignette. The reference maps are darkest at the corners — it's what keeps
+   your eye in the middle and hides where the terrain mesh stops. */
+.map-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    rgba(20, 30, 40, 0) 35%,
+    rgba(20, 30, 40, 0.28) 78%,
+    rgba(16, 24, 32, 0.55) 100%
+  );
+}
+
+/* Labels are HTML positioned over the canvas rather than sprites in the
+   scene — text stays sharp at any zoom, and it uses the same font as the rest
+   of the menu instead of being baked into a texture. */
+.map-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.map-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  color: #f4f9fb;
+  /* Heavy shadow, no panel behind it — same as the game, where the name sits
+     straight on the terrain and stays readable over snow or shadow. */
+  text-shadow:
+    0 0 3px rgba(10, 18, 26, 0.95),
+    0 0 9px rgba(10, 18, 26, 0.8),
+    0 1px 2px rgba(10, 18, 26, 1);
+  opacity: 0;
+  /* Opacity ONLY. The transform is rewritten every frame to track the marker
+     through the projection, so transitioning it meant the name spent the whole
+     drag easing toward where the marker was 180ms ago and never caught up
+     until you let go. Fading is a state change and can animate; position is
+     tracking and must not. */
+  transition: opacity 0.18s ease;
+  will-change: transform;
+}
+.map-label.visible { opacity: 0.88; }
+.map-label.active { opacity: 1; font-weight: 700; }
+
+/* Sits above the bottom nav, centred — the game puts the location name and
+   the controls hint in the same band. */
+.map-readout {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 0 1rem clamp(3.5rem, 9vw, 5.5rem);
+  pointer-events: none;
+  position: relative;
+  z-index: 2;
+}
+.map-place {
+  font-size: clamp(1.1rem, 2.6vw, 1.7rem);
+  letter-spacing: 0.1em;
+  color: #f4f9fb;
+  text-shadow: 0 0 8px rgba(10, 18, 26, 0.9), 0 1px 2px rgba(10, 18, 26, 1);
+}
+.map-hint {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  color: rgba(244, 249, 251, 0.66);
+  text-shadow: 0 1px 3px rgba(10, 18, 26, 0.9);
+}

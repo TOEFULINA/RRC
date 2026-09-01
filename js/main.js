@@ -31,7 +31,8 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
-import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01c3";
+import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01d1";
+import { initRainAudio, toggleRainAudio } from "./rainAudio.js?v=2026-09-01d1";
 import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox } from "./vinyl.js?v=3";
 import { startLoaderSpin, stopLoaderSpin } from "./loaderSpin.js";
 
@@ -701,6 +702,17 @@ Object.entries({ "mc-w": "w", "mc-a": "a", "mc-s": "s", "mc-d": "d" }).forEach((
   btn.addEventListener("pointercancel", up);
   btn.addEventListener("pointerleave", up);
   btn.addEventListener("contextmenu", (e) => e.preventDefault());
+});
+
+// Weather you can hear. Nothing is built until the first click or keypress —
+// browsers won't start audio before a gesture, and neither should we.
+initRainAudio();
+
+// Press M to mute it.
+window.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "m" || isPauseMenuOpen()) return;
+  const on = toggleRainAudio();
+  if (on !== null) console.info(`rain audio: ${on ? "on" : "muted"}`);
 });
 
 // ---------------------------------------------------------------- pause menu

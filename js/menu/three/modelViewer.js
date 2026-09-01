@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { createStudioEnvironment } from "./studioEnv.js";
 
 // Some exported .glb files (anything run through Draco compression to
 // shrink file size — Blender's glTF exporter offers this as a checkbox)
@@ -99,7 +99,8 @@ export function mountModelViewer(
   renderer.setSize(width, height);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.98; // was 0.75 — overall brightness
+  renderer.toneMappingExposure = 1.02; // nudged with the studio env, whose
+  // surround is darker than the old room box and pulled the fill down a little.
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -192,11 +193,21 @@ export function mountModelViewer(
   }
 
   const pmrem = new THREE.PMREMGenerator(renderer);
-  // Higher sigma = more blurred environment = softer, less pinpoint specular
-  // highlights on glossy/glass materials (was 0.04 — sharp enough to throw
-  // small hard-edged hotspots).
-  const envTexture = pmrem.fromScene(new RoomEnvironment(), 0.12).texture;
+  // Studio setup rather than three's RoomEnvironment — see studioEnv.js for
+  // why. Lower sigma than the 0.12 the room box needed: these panels are large
+  // and soft to begin with, so blurring them as hard as that just mushes the
+  // key and the fill into one another and loses the falloff that makes the
+  // clear acrylic look like glass. Still soft enough not to throw the small
+  // hard-edged hotspots 0.04 used to.
+  const studio = createStudioEnvironment();
+  const envTexture = pmrem.fromScene(studio, 0.06).texture;
   scene.environment = envTexture;
+  // The scene was only ever scaffolding for the cubemap.
+  studio.traverse((o) => {
+    if (!o.isMesh) return;
+    o.geometry?.dispose();
+    o.material?.dispose();
+  });
 
   // More ambient fill relative to the key light narrows the gap between a
   // model's lit and shadowed sides, which reads as softer overall lighting
@@ -291,18 +302,14 @@ export function mountModelViewer(
     fitCameraToSphere(true);
   }
 
-  // Some models (the nail-set cases) export a "clear_plastic_material3"
-  // material for their hinged display case — glTF already tags it with
-  // KHR_materials_transmission, which GLTFLoader turns into a passable
-  // MeshPhysicalMaterial automatically, but the exported roughness/IOR/
-  // thickness values read as hazy/milky rather than convincingly glass-like.
-  // This swaps that material for a hand-tuned physical-glass one: full
-  // transmission with real refraction (ior), a thin clearcoat for the
-  // polished-surface highlight, and a faint attenuation tint so thicker
-  // sections (the case walls, seen edge-on) read very slightly darker/
-  // cooler than a face viewed straight-on — the same cue real acrylic
-  // gives. Matched by name prefix so it applies to every nail case without
-  // needing a special-case flag in items.js.
+  // The nail-set cases export "clear_plastic_material3" with
+  // KHR_materials_transmission. GLTFLoader's own interpretation of it reads
+  // milky, so this replaces it with a hand-tuned clear acrylic.
+  //
+  // (Letting the file's native material through — the way three's own
+  // transmission example does — was tried and looked worse here, so this
+  // override stays. Matched by name prefix so every nail case gets it without
+  // a per-item flag in items.js.)
   function upgradeGlassMaterials(root) {
     root.traverse((obj) => {
       if (!obj.isMesh) return;
@@ -313,26 +320,25 @@ export function mountModelViewer(
           metalness: 0,
           roughness: 0.03,
           // FULL transmission. At 0.65 the remaining 35% still rendered as
-          // opaque white diffuse, which is what made the case look milky
-          // rather than clear.
+          // opaque white diffuse, which is what made the case look milky.
           transmission: 1.0,
-          // Thin, and with attenuation effectively switched off (white tint,
-          // a long distance). The old 0.2 thickness with a blue-white
-          // attenuationColor was actively dyeing the case pale blue.
+          // Thin, with attenuation effectively off (white tint, a very long
+          // distance). A thicker value with a blue-white attenuationColor was
+          // dyeing the case pale blue.
           thickness: 0.04,
           attenuationColor: 0xffffff,
           attenuationDistance: 1000,
           ior: 1.49, // acrylic — real glass is nearer 1.5
           specularIntensity: 1,
           specularColor: 0xffffff,
-          // No clearcoat. On top of a fully transmissive surface it only adds
+          // No clearcoat: on top of a fully transmissive surface it only adds
           // a broad white sheen, which reads as haze on the panel faces.
           clearcoat: 0,
           envMapIntensity: 1.0,
-          // Transmission is rendered in its own pass, NOT the transparent
-          // queue. GLTFLoader had this material as BLEND with a 0.25 base
-          // alpha, so it was ALSO being alpha-blended at 25% opacity — a
-          // second, unwanted layer of white on top of the transmission.
+          // Transmission renders in its own pass, NOT the transparent queue.
+          // GLTFLoader had this material as BLEND with a 0.25 base alpha, so
+          // it was ALSO being alpha-blended at 25% opacity — a second layer of
+          // white on top of the transmission.
           transparent: false,
           opacity: 1,
           side: THREE.DoubleSide,

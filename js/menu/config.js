@@ -28,9 +28,3 @@ export const COMPASS_DIRECTIONS = {
   bottom: { key: "map", label: "Map" },
   left: { key: "magic", label: "Magic" },
 };
-
-// Map doesn't route to an internal view — it sends visitors out to the
-// real shop site in a new tab instead. Checked by key (COMPASS_DIRECTIONS.bottom.key)
-// wherever compass navigation is handled, so it stays correct even if the
-// directions above are ever reassigned.
-export const MAP_EXTERNAL_URL = "https://www.toefulina.com/archive-shop";

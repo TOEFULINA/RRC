@@ -1,6 +1,6 @@
-import { BACKGROUND_IMAGE, COMPASS_DIRECTIONS, MAP_EXTERNAL_URL } from "./config.js";
+import { BACKGROUND_IMAGE, COMPASS_DIRECTIONS } from "./config.js";
 import { initRouter, onRouteChange, navigate, getInitialRoute, getCurrentRoute } from "./router.js";
-import { isPauseMenuOpen, setPauseMenuOpen } from "../pauseState.js";
+import { isPauseMenuOpen } from "../pauseState.js";
 import { renderCompassHome } from "./views/compassHome.js";
 import { renderItemsView } from "./views/itemsView.js";
 import { renderSkillsView } from "./views/skillsView.js";
@@ -70,16 +70,9 @@ document.addEventListener("keydown", (e) => {
 
   const current = getCurrentRoute();
   if (current === "home") {
-    const targetKey = COMPASS_DIRECTIONS[dir].key;
-    // Map returns you to the room instead of leaving the site (was:
-    // an external link, in the standalone compass site this was
-    // ported from - see compassHome.js's click handler for the same
-    // change on click).
-    if (targetKey === COMPASS_DIRECTIONS.bottom.key) {
-      setPauseMenuOpen(false);
-      return;
-    }
-    navigate(targetKey);
+    // Down goes to the Map like the other three go to their own screens —
+    // see compassHome.js for why it used to do something else.
+    navigate(COMPASS_DIRECTIONS[dir].key);
     return;
   }
 
