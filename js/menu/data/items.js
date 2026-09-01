@@ -244,6 +244,10 @@ export const items = [
   // Accessories
   {
     ...placeholder("item-10", "Charm Belt", "Accessories"),
+    // Pulled straight out of room.glb rather than exported separately — BELT
+    // is a material there, not a node, so it was one primitive on a
+    // multi-material mesh. Extracted by material and re-centred on the origin.
+    model: "/menu/models/charm-belt.glb",
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "ARCHIVED" },
@@ -265,6 +269,7 @@ export const items = [
   },
   {
     ...placeholder("item-12", "Engraved Headphones", "Accessories"),
+    model: "/menu/models/engraved-headphones.glb",
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "PERSONAL" },
@@ -274,6 +279,7 @@ export const items = [
   },
   {
     ...placeholder("item-13", "Deco Majora's Mask Case", "Accessories"),
+    model: "/menu/models/majoras-mask-case.glb",
     stats: [
       { label: "Year", value: "2024" },
       { label: "Value", value: "PERSONAL" },
@@ -517,6 +523,9 @@ export const items = [
   },
   {
     ...placeholder("item-34", "Halloween Animal Crossing Set", "Nail Sets"),
+    model: "/menu/models/ac-halloween-nails.glb",
+    viewerFitMargin: 0.75,
+    viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },
@@ -536,6 +545,9 @@ export const items = [
   },
   {
     ...placeholder("item-36", "Deco Berserk Set", "Nail Sets"),
+    model: "/menu/models/berserk-nails.glb",
+    viewerFitMargin: 0.75,
+    viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     description: "Custom",
   },
   {
@@ -547,6 +559,30 @@ export const items = [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },
       { label: "Weight", value: "—" },
+    ],
+  },
+  {
+    ...placeholder("item-58", "Plaid Junk Set", "Nail Sets"),
+    model: "/menu/models/plaid-junk-nails.glb",
+    // Same framing as the other Tripo-scanned nail sets — they're all the
+    // same subject at the same scale, so they should sit identically.
+    viewerFitMargin: 0.75,
+    viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
+    stats: [
+      { label: "Year", value: "2025" },
+      { label: "Value", value: "\u2014" },
+      { label: "Weight", value: "\u2014" },
+    ],
+  },
+  {
+    ...placeholder("item-59", "Toefu Lina Squid Set", "Nail Sets"),
+    model: "/menu/models/squid-set-nails.glb",
+    viewerFitMargin: 0.75,
+    viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
+    stats: [
+      { label: "Year", value: "2025" },
+      { label: "Value", value: "\u2014" },
+      { label: "Weight", value: "\u2014" },
     ],
   },
   {
