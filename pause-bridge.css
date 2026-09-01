@@ -186,5 +186,35 @@ body.paused #pause-open-btn {
 #pause-menu-root #bg-layer {
   background-color: #2b2721;
   background-image: var(--bg-image, none);
-  filter: blur(6px);
+  filter: blur(3px);
+}
+
+/* ---- nothing scrolls except the item columns ------------------------------
+   menu.css only sets overflow-x on html/body, so the page could still scroll
+   vertically — enough to drag the fixed nav bar out of place and reveal a
+   strip of dead space under it. This is a full-screen game menu; the page
+   itself should never move.
+
+   The two item columns keep their own scrolling, because that's the one place
+   content legitimately runs past the screen. Everything else is laid out to
+   fit. .gallery-grid is left alone too — it's the collage inside a panel, not
+   the page. */
+html,
+body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  height: 100%;
+}
+#pause-menu-root,
+#pause-menu-root #app,
+#pause-menu-root .items-fullscreen,
+#pause-menu-root .skills-fullscreen,
+#pause-menu-root .compass-screen {
+  overflow: hidden;
+}
+/* the exceptions */
+#pause-menu-root .category-rows-viewport,
+#pause-menu-root .list-rows-viewport {
+  overflow-y: auto;
+  overscroll-behavior: contain; /* don't chain a scroll up to the page */
 }

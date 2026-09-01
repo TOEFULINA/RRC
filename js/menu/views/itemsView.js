@@ -70,10 +70,13 @@ export function renderItemsView(container) {
       <div class="info-card">
         <div class="info-card-inner">
           <div class="info-name rune"></div>
+          <!-- Description sits directly under the name now, above the divider
+               and stats — it reads as a subtitle for the item rather than a
+               footnote stranded at the bottom of the card. -->
+          <p class="item-description"></p>
           <div class="info-divider"></div>
           <div class="info-body">
             <ul class="stat-list"></ul>
-            <p class="item-description"></p>
           </div>
         </div>
       </div>

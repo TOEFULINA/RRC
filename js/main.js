@@ -715,12 +715,31 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
+// The last frame the player actually saw, kept so it can be put back. Skills
+// swaps #bg-layer to its own sky and restores what it found — but anything
+// that leaves the layer holding another screen's image means the compass shows
+// that instead of the room. Re-applying on every return to the compass makes
+// the POV backdrop the one guaranteed state rather than the default one.
+let pauseShot = null;
+
+function applyPauseShot() {
+  const layer = document.getElementById("bg-layer");
+  if (!layer || !pauseShot) return;
+  layer.classList.remove("bg-panning");
+  layer.style.backgroundPosition = "";
+  layer.style.setProperty("--bg-image", `url(${pauseShot})`);
+}
+
+window.addEventListener("hashchange", () => {
+  if (isPauseMenuOpen() && getCurrentRoute() === "home") applyPauseShot();
+});
+
 onPauseMenuChange((open) => {
   if (open) {
     renderer.render(scene, camera);
     try {
-      const shot = canvas.toDataURL("image/jpeg", 0.82);
-      document.getElementById("bg-layer")?.style.setProperty("--bg-image", `url(${shot})`);
+      pauseShot = canvas.toDataURL("image/jpeg", 0.82);
+      applyPauseShot();
     } catch (err) {
       console.error("pause menu: couldn't snapshot the canvas —", err);
     }
@@ -730,7 +749,11 @@ onPauseMenuChange((open) => {
 });
 
 document.getElementById("pause-open-btn")?.addEventListener("click", () => {
-  if (!isPauseMenuOpen()) setPauseMenuOpen(true);
+  if (isPauseMenuOpen()) return;
+  // Always land on the compass. The route lives in the URL hash, so without
+  // this you reopen wherever you last were — usually Items.
+  navigate("home");
+  setPauseMenuOpen(true);
 });
 document.getElementById("pause-close-btn")?.addEventListener("click", () => {
   setPauseMenuOpen(false);
