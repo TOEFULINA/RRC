@@ -365,7 +365,7 @@ canvas.addEventListener("pointerdown", (e) => {
 canvas.addEventListener("pointermove", (e) => {
   // Hover cue on the chair, same idea as the records. Only while idle: mid-drag
   // you are looking around, not pointing at anything.
-  if (!pointerDownPos && !seated && !camTween && !isPauseMenuOpen() && e.pointerType !== "touch") {
+  if (SEAT_ENABLED && !pointerDownPos && !seated && !camTween && !isPauseMenuOpen() && e.pointerType !== "touch") {
     setSeatHover(pickSeat(e));
   }
   if (!pointerDownPos || isPauseMenuOpen()) return;
@@ -399,6 +399,14 @@ window.addEventListener("blur", () => { pointerDownPos = null; });
 // geometry — a Poang's footprint is nearly symmetric — so it faces whichever
 // way points toward the room's open interior, which is how a chair would
 // actually be arranged to sit in.
+// OFF. Sitting is disabled — it was costing frames on mobile and isn't worth
+// it. Flipping this back to true restores the whole feature; everything below
+// is intact and gated on it, nothing was deleted.
+//
+// If you ever want it back on desktop only, the condition to use is
+// `!matchMedia("(hover: none) and (pointer: coarse)").matches` rather than a
+// screen-width check — it's the touch-ness that costs, not the size.
+const SEAT_ENABLED = false;
 const SEAT_PATTERN = /^poang$/i;
 const SEAT_FOV = 58;             // slightly tighter than standing; not a zoom
 const SEAT_FORWARD_NUDGE = 0.12; // off dead-centre so you aren't inside the backrest
@@ -424,6 +432,7 @@ const seatPointer = new THREE.Vector2();
 
 function initSeat(model) {
   seatMeshes.length = 0;
+  if (!SEAT_ENABLED) return 0;
   model.traverse((obj) => {
     if (!obj.isMesh) return;
     if (!SEAT_PATTERN.test(obj.name || "") && !SEAT_PATTERN.test(obj.parent?.name || "")) return;
@@ -582,7 +591,7 @@ function setSeatHover(on) {
 }
 
 function pickSeat(e) {
-  if (!seatMeshes.length) return false;
+  if (!SEAT_ENABLED || !seatMeshes.length) return false;
   const rect = canvas.getBoundingClientRect();
   seatPointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   seatPointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -646,8 +655,18 @@ function applyWalk(delta) {
   if (moveKeys.s) _move.sub(_forward);
   if (moveKeys.d) _move.add(_right);
   if (moveKeys.a) _move.sub(_right);
+  // The stick adds on top of the keys rather than replacing them, so a device
+  // with both keeps both working.
+  if (joy.x || joy.y) {
+    _move.addScaledVector(_forward, -joy.y);
+    _move.addScaledVector(_right, joy.x);
+  }
   if (_move.lengthSq() === 0) { updateBob(delta, 0); return; }
-  _move.normalize().multiplyScalar(MOVE_SPEED * delta);
+  // Keys are all-or-nothing; the stick is analog, so its magnitude (0..1)
+  // becomes walking speed. clamp so a diagonal isn't faster than a straight
+  // line, which is what normalising alone would give you.
+  const throttle = Math.min(1, _move.length());
+  _move.normalize().multiplyScalar(MOVE_SPEED * throttle * delta);
 
   const beforeX = camera.position.x;
   const beforeZ = camera.position.z;
@@ -679,17 +698,68 @@ window.addEventListener("blur", () => {
   moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
 });
 
-Object.entries({ "mc-w": "w", "mc-a": "a", "mc-s": "s", "mc-d": "d" }).forEach(([id, key]) => {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  const down = (e) => { e.preventDefault(); pressKey(key); };
-  const up = (e) => { e.preventDefault(); releaseKey(key); };
-  btn.addEventListener("pointerdown", down);
-  btn.addEventListener("pointerup", up);
-  btn.addEventListener("pointercancel", up);
-  btn.addEventListener("pointerleave", up);
-  btn.addEventListener("contextmenu", (e) => e.preventDefault());
-});
+// ---------------------------------------------------------------- joystick
+// Replaces the four-arrow d-pad. -1..1 on each axis; y is negative when the
+// thumb is pushed up, which is why applyWalk subtracts it from forward.
+const joy = { x: 0, y: 0 };
+
+(() => {
+  const stick = document.getElementById("mc-stick");
+  const knob = document.getElementById("mc-knob");
+  if (!stick || !knob) return;
+
+  const RADIUS = 40;      // px the knob may travel from centre
+  const DEADZONE = 0.12;  // ignore the smallest wobbles so it doesn't creep
+  let active = null;      // pointerId currently driving the stick
+
+  const setKnob = (dx, dy) => {
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  };
+
+  const move = (e) => {
+    const r = stick.getBoundingClientRect();
+    let dx = e.clientX - (r.left + r.width / 2);
+    let dy = e.clientY - (r.top + r.height / 2);
+    const len = Math.hypot(dx, dy);
+    // Past the edge the knob stops but the direction keeps updating, so you
+    // can swing your thumb around the rim to turn without letting go.
+    if (len > RADIUS) { dx = (dx / len) * RADIUS; dy = (dy / len) * RADIUS; }
+    setKnob(dx, dy);
+    const nx = dx / RADIUS, ny = dy / RADIUS;
+    const mag = Math.hypot(nx, ny);
+    if (mag < DEADZONE) { joy.x = 0; joy.y = 0; return; }
+    joy.x = nx;
+    joy.y = ny;
+  };
+
+  const end = (e) => {
+    if (active !== null && e.pointerId !== active) return;
+    active = null;
+    joy.x = 0; joy.y = 0;
+    knob.classList.add("releasing");
+    setKnob(0, 0);
+    setTimeout(() => knob.classList.remove("releasing"), 200);
+  };
+
+  stick.addEventListener("pointerdown", (e) => {
+    if (isPauseMenuOpen() || seated || focusedVinyl) return;
+    e.preventDefault();
+    active = e.pointerId;
+    stick.setPointerCapture(e.pointerId);  // keep tracking past the stick's edge
+    knob.classList.remove("releasing");
+    move(e);
+  });
+  stick.addEventListener("pointermove", (e) => {
+    if (active === null || e.pointerId !== active) return;
+    e.preventDefault();
+    move(e);
+  });
+  stick.addEventListener("pointerup", end);
+  stick.addEventListener("pointercancel", end);
+  stick.addEventListener("lostpointercapture", end);
+  window.addEventListener("blur", () => end({ pointerId: active }));
+  stick.addEventListener("contextmenu", (e) => e.preventDefault());
+})();
 
 // ---------------------------------------------------------------- pause menu
 window.addEventListener("keydown", (e) => {
@@ -745,6 +815,7 @@ onPauseMenuChange((open) => {
     }
     pointerDownPos = null;
     moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
+    joy.x = 0; joy.y = 0;
   }
 });
 
@@ -840,7 +911,7 @@ loader.load(
     // raycasts, which needs resolved world matrices.
     initVinyl(model, camera, canvas);
     const seats = initSeat(model);
-    console.info(`seat: ${seats} mesh(es) — click the chair to sit.`);
+    console.info(seats ? `seat: ${seats} mesh(es) — click the chair to sit.` : "seat: disabled.");
 
     scene.environment = pmrem.fromScene(model, 0.02, 0.1, 40).texture;
 

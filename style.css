@@ -10,6 +10,18 @@
   font-style: normal;
 }
 
+/* The on-screen-display font from a VCR — the same lineage as the no-signal
+   blue the loading screen sits on. font-display: block so the byline never
+   flashes in a fallback face first; it's one short line, so waiting on the
+   font is better than showing the wrong one. */
+@font-face {
+  font-family: 'VCR OSD Mono';
+  src: url('fonts/VCR_OSD_MONO_1.001.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -82,6 +94,22 @@ html, body {
 /* Kept in the DOM but normally empty: the percentage is gone, and this is now
    only ever written to if the model fails to load, so a failure still says so
    instead of leaving you on a blue screen forever. */
+/* Sits at the bottom of the blue, not with the shoe — a broadcast byline
+   rather than a caption. */
+.loading-byline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(22px, env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  font-family: 'VCR OSD Mono', 'Courier New', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  color: #cfe0ff;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 .loading-sub {
   margin-top: 4px;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -241,19 +269,17 @@ html, body {
    touch-primary screens) so desktop players never see a d-pad they don't
    need. Laid out as a 3x3 grid so w/a/s/d land in their natural compass
    positions without hand-placing four separate offsets. */
+/* Virtual joystick, touch devices only.
+   Sits low in the bottom-left — the old d-pad was pinned 68px up to clear a
+   subtitle bar, which put it awkwardly high in the middle of the screen.
+   env(safe-area-inset-*) keeps it clear of the home indicator on a notched
+   phone without hard-coding a gap on phones that don't have one. */
 #mobile-controls {
   position: fixed;
-  left: 18px;
-  /* Nudged down a bit from 90px — the subtitle bar underneath is now its
-     own full-width band (see #wake-subtitle's mobile breakpoint) with a
-     predictable height, so the d-pad can sit closer to it without
-     overlapping instead of leaving a big gap. */
-  bottom: 68px;
+  left: max(20px, env(safe-area-inset-left, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
   z-index: 20;
   display: none;
-  grid-template-columns: repeat(3, 42px);
-  grid-template-rows: repeat(3, 42px);
-  gap: 6px;
   opacity: 0;
   transition: opacity .6s ease 1s;
   pointer-events: none;
@@ -261,27 +287,37 @@ html, body {
 }
 #mobile-controls.show { opacity: .85; pointer-events: auto; }
 @media (hover: none) and (pointer: coarse) {
-  #mobile-controls { display: grid; }
+  #mobile-controls { display: block; }
 }
-.mc-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(10,8,13,0.55);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 10px;
-  color: #f2ece2;
-  font-size: 0.9rem;
-  line-height: 1;
+
+#mc-stick {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(10, 8, 13, 0.45), rgba(10, 8, 13, 0.6));
+  border: 1px solid rgba(255, 255, 255, 0.18);
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
 }
-.mc-btn:active { background: rgba(255,206,107,0.3); }
-.mc-w { grid-column: 2; grid-row: 1; }
-.mc-a { grid-column: 1; grid-row: 2; }
-.mc-s { grid-column: 2; grid-row: 2; }
-.mc-d { grid-column: 3; grid-row: 2; }
+#mc-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: rgba(242, 236, 226, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  /* No transition while dragging — the knob must track the thumb exactly.
+     The snap back to centre on release is animated instead, from JS. */
+  pointer-events: none;
+}
+#mc-knob.releasing {
+  transition: transform 0.18s ease-out;
+}
 
 /* ---------- on-screen mobile prev/next (vinyl crate, closet rack) ---------- */
 /* Same touch-only gating as #mobile-controls above, but shown/hidden by JS

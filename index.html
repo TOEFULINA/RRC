@@ -4,14 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>the room — portfolio</title>
-<link rel="stylesheet" href="style.css?v=2026-09-01menubtn" />
+<link rel="stylesheet" href="style.css?v=2026-09-01noseat" />
 <!-- Ported Skyrim-compass portfolio, scoped to #pause-menu-root only (see
      menu.css's own header comments for how the scoping works) — it does
      NOT affect anything above. -->
-<link rel="stylesheet" href="menu.css?v=2026-09-01menubtn" />
+<link rel="stylesheet" href="menu.css?v=2026-09-01noseat" />
 <!-- Glue styles new to this combined project: pause button, the room's
      blur/dim-on-pause filter, and #pause-menu-root's own fade transition. -->
-<link rel="stylesheet" href="pause-bridge.css?v=2026-09-01menubtn" />
+<link rel="stylesheet" href="pause-bridge.css?v=2026-09-01noseat" />
 </head>
 <body>
 
@@ -21,17 +21,18 @@
       <canvas id="loading-spin" width="72" height="72"></canvas>
       <div class="loading-sub"></div>
     </div>
+    <div class="loading-byline">TOEFU LINA 2026</div>
   </div>
 
   <!-- The "what do you want to do?" choice screen is gone - the room
        wakes up on its own now (see startSeatedIntro in js/main.js), and
        the ported Skyrim pause menu (js/menu/) is the real navigation. -->
 
-  <div id="mobile-controls">
-    <button id="mc-w" class="mc-btn mc-w" aria-label="walk forward">&#9650;</button>
-    <button id="mc-a" class="mc-btn mc-a" aria-label="walk left">&#9664;</button>
-    <button id="mc-s" class="mc-btn mc-s" aria-label="walk back">&#9660;</button>
-    <button id="mc-d" class="mc-btn mc-d" aria-label="walk right">&#9654;</button>
+  <!-- Analog stick, touch only. Replaces the four-arrow d-pad: a thumb on a
+       stick gives direction AND speed in one gesture, and you can walk a
+       diagonal without pressing two buttons. -->
+  <div id="mobile-controls" role="application" aria-label="movement stick">
+    <div id="mc-stick"><div id="mc-knob"></div></div>
   </div>
 
   <canvas id="scene"></canvas>
@@ -67,7 +68,7 @@
   }
   </script>
 
-  <script type="module" src="js/main.js?v=2026-09-01menubtn"></script>
-  <script type="module" src="js/menu/main.js?v=2026-09-01menubtn"></script>
+  <script type="module" src="js/main.js?v=2026-09-01noseat"></script>
+  <script type="module" src="js/menu/main.js?v=2026-09-01noseat"></script>
 </body>
 </html>
