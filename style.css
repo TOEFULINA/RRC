@@ -269,9 +269,9 @@ html, body {
    touch-primary screens) so desktop players never see a d-pad they don't
    need. Laid out as a 3x3 grid so w/a/s/d land in their natural compass
    positions without hand-placing four separate offsets. */
-/* Virtual joystick, touch devices only.
-   Sits low in the bottom-left — the old d-pad was pinned 68px up to clear a
-   subtitle bar, which put it awkwardly high in the middle of the screen.
+/* WASD d-pad, touch devices only.
+   Position is the joystick's — low in the bottom-left corner, rather than the
+   old 68px-up spot that put it awkwardly high on the screen.
    env(safe-area-inset-*) keeps it clear of the home indicator on a notched
    phone without hard-coding a gap on phones that don't have one. */
 #mobile-controls {
@@ -280,6 +280,9 @@ html, body {
   bottom: max(20px, env(safe-area-inset-bottom, 0px));
   z-index: 20;
   display: none;
+  grid-template-columns: repeat(3, 42px);
+  grid-template-rows: repeat(3, 42px);
+  gap: 6px;
   opacity: 0;
   transition: opacity .6s ease 1s;
   pointer-events: none;
@@ -287,37 +290,87 @@ html, body {
 }
 #mobile-controls.show { opacity: .85; pointer-events: auto; }
 @media (hover: none) and (pointer: coarse) {
-  #mobile-controls { display: block; }
+  #mobile-controls { display: grid; }
 }
-
-#mc-stick {
+/* 8-bit d-pad.
+   Square corners, a hard two-tone bevel instead of a hairline, and arrows
+   drawn as actual pixel grids rather than font glyphs — a Unicode triangle is
+   a smooth vector shape and would have stayed smooth no matter what else
+   changed around it. */
+.mc-btn {
   position: relative;
-  width: 116px;
-  height: 116px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, rgba(10, 8, 13, 0.45), rgba(10, 8, 13, 0.6));
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #17141c;
+  border: 0;
+  border-radius: 0;
+  /* NES-style bevel: light from the top-left, shadow to the bottom-right,
+     all hard steps — no gradients, no blur. */
+  box-shadow:
+    inset 3px 3px 0 0 rgba(255, 255, 255, 0.22),
+    inset -3px -3px 0 0 rgba(0, 0, 0, 0.55),
+    0 0 0 3px rgba(10, 8, 13, 0.75);
+  color: #f2ece2;
+  /* The label text stays in the DOM for screen readers; the visible arrow is
+     drawn by ::before below. */
+  font-size: 0;
+  line-height: 1;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
 }
-#mc-knob {
+
+/* One arrow, built cell by cell out of box-shadows: a 4-row triangle on a 3px
+   grid, 1-3-5-7 cells wide. The element itself is the top cell; every other
+   cell is a shadow offset in whole multiples of the grid, so nothing can land
+   on a half-pixel and go soft. The three other directions are this same shape
+   rotated, which keeps them pixel-identical instead of hand-drawn four times. */
+.mc-btn::before {
+  content: "";
   position: absolute;
+  width: 3px;
+  height: 3px;
+  background: currentColor;
+  /* The shape is 19x12 with its top cell here, so its visual centre sits at
+     (1.5px, 6px) from this cell's top-left. Both the placement and the
+     rotation pivot use that point — pivoting on the cell instead (the obvious
+     50% 50%) swings the triangle around its tip, which threw the left, right
+     and down arrows off-centre while up looked fine. */
   left: 50%;
   top: 50%;
-  width: 46px;
-  height: 46px;
-  margin: -23px 0 0 -23px;
-  border-radius: 50%;
-  background: rgba(242, 236, 226, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  /* No transition while dragging — the knob must track the thumb exactly.
-     The snap back to centre on release is animated instead, from JS. */
-  pointer-events: none;
+  margin: -6px 0 0 -1.5px;
+  transform-origin: 1.5px 6px;
+  box-shadow:
+    /* row 2 */
+    -3px 3px 0 currentColor, 0 3px 0 currentColor, 3px 3px 0 currentColor,
+    /* row 3 */
+    -6px 6px 0 currentColor, -3px 6px 0 currentColor, 0 6px 0 currentColor,
+    3px 6px 0 currentColor, 6px 6px 0 currentColor,
+    /* row 4 */
+    -9px 9px 0 currentColor, -6px 9px 0 currentColor, -3px 9px 0 currentColor,
+    0 9px 0 currentColor, 3px 9px 0 currentColor, 6px 9px 0 currentColor,
+    9px 9px 0 currentColor;
 }
-#mc-knob.releasing {
-  transition: transform 0.18s ease-out;
+.mc-w::before { transform: rotate(0deg); }
+.mc-d::before { transform: rotate(90deg); }
+.mc-s::before { transform: rotate(180deg); }
+.mc-a::before { transform: rotate(270deg); }
+
+/* Pressed: the bevel inverts, so the key reads as pushed in. */
+.mc-btn:active {
+  background: #3a2f16;
+  color: #ffce6b;
+  box-shadow:
+    inset 3px 3px 0 0 rgba(0, 0, 0, 0.55),
+    inset -3px -3px 0 0 rgba(255, 255, 255, 0.18),
+    0 0 0 3px rgba(10, 8, 13, 0.75);
 }
+
+.mc-w { grid-column: 2; grid-row: 1; }
+.mc-a { grid-column: 1; grid-row: 2; }
+.mc-s { grid-column: 2; grid-row: 2; }
+.mc-d { grid-column: 3; grid-row: 2; }
 
 /* ---------- on-screen mobile prev/next (vinyl crate, closet rack) ---------- */
 /* Same touch-only gating as #mobile-controls above, but shown/hidden by JS

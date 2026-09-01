@@ -227,3 +227,32 @@ body {
   overflow-y: auto;
   overscroll-behavior: contain; /* don't chain a scroll up to the page */
 }
+
+/* The rose is now a 260px source blown up to ~720px, so this is what keeps the
+   upscale hard-edged instead of smoothing it straight back into a blur. */
+#pause-menu-root .compass-art {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ---- pixelated info card ---------------------------------------------------
+   Same treatment as the compass rose, and for the same reason: the source art
+   is 4279px wide shown at ~500px, so image-rendering alone does nothing —
+   pixelated only affects images being magnified. The -px file is a 290px
+   nearest-neighbour downsample, which the browser then blows back up to 500
+   with hard edges — about a 1.7x chunk. Deliberately gentle: at 170px the
+   corner motifs started dissolving into blocks rather than reading as
+   ornament. Both this and the rose are tuned to the same 1.7x.
+
+   The original is untouched at info-card-wide.png; delete this block to undo.
+
+   Not done to the skill divider: it renders about 9px tall, so there is no
+   room for chunks — it just loses its tapered ends and becomes a plain bar.
+   Not done to the l-/r- selector panels either: they're flat dark fields with
+   a hairline border, so there's nothing to pixelate and the edge only goes
+   ragged. */
+#pause-menu-root .info-card {
+  background-image: url("/menu/ui/info-card-wide-px.png");
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}

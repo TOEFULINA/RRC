@@ -7,7 +7,16 @@ import { cameFromToefulina, goBackToReferrer } from "../utils/referrer.js";
 // public/compass-rose.png. Swap that file for a different piece of art
 // any time; as long as the new image's star-tips touch its canvas edges
 // the same way, the label positions below still line up.
-const COMPASS_ART = "/menu/compass-rose.png";
+// The -px file is the same artwork downsampled to 430px wide with a
+// nearest-neighbour kernel. The chunk has to be baked in: the full-res rose is
+// 3863px shown at ~720px, and image-rendering:pixelated only affects images
+// being MAGNIFIED, so applied to the original it did precisely nothing.
+// Small source + pixelated upscale is what actually produces visible pixels.
+// 430 rather than the 260 first tried: about a 1.7x chunk, enough to read as
+// pixel art while the knotwork in the centre still holds its shape.
+// The original is untouched at /menu/compass-rose.png — swap this line back to
+// undo.
+const COMPASS_ART = "/menu/compass-rose-px.png";
 
 export function renderCompassHome(container) {
   const el = document.createElement("div");

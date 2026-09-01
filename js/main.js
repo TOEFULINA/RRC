@@ -655,18 +655,8 @@ function applyWalk(delta) {
   if (moveKeys.s) _move.sub(_forward);
   if (moveKeys.d) _move.add(_right);
   if (moveKeys.a) _move.sub(_right);
-  // The stick adds on top of the keys rather than replacing them, so a device
-  // with both keeps both working.
-  if (joy.x || joy.y) {
-    _move.addScaledVector(_forward, -joy.y);
-    _move.addScaledVector(_right, joy.x);
-  }
   if (_move.lengthSq() === 0) { updateBob(delta, 0); return; }
-  // Keys are all-or-nothing; the stick is analog, so its magnitude (0..1)
-  // becomes walking speed. clamp so a diagonal isn't faster than a straight
-  // line, which is what normalising alone would give you.
-  const throttle = Math.min(1, _move.length());
-  _move.normalize().multiplyScalar(MOVE_SPEED * throttle * delta);
+  _move.normalize().multiplyScalar(MOVE_SPEED * delta);
 
   const beforeX = camera.position.x;
   const beforeZ = camera.position.z;
@@ -698,68 +688,20 @@ window.addEventListener("blur", () => {
   moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
 });
 
-// ---------------------------------------------------------------- joystick
-// Replaces the four-arrow d-pad. -1..1 on each axis; y is negative when the
-// thumb is pushed up, which is why applyWalk subtracts it from forward.
-const joy = { x: 0, y: 0 };
-
-(() => {
-  const stick = document.getElementById("mc-stick");
-  const knob = document.getElementById("mc-knob");
-  if (!stick || !knob) return;
-
-  const RADIUS = 40;      // px the knob may travel from centre
-  const DEADZONE = 0.12;  // ignore the smallest wobbles so it doesn't creep
-  let active = null;      // pointerId currently driving the stick
-
-  const setKnob = (dx, dy) => {
-    knob.style.transform = `translate(${dx}px, ${dy}px)`;
-  };
-
-  const move = (e) => {
-    const r = stick.getBoundingClientRect();
-    let dx = e.clientX - (r.left + r.width / 2);
-    let dy = e.clientY - (r.top + r.height / 2);
-    const len = Math.hypot(dx, dy);
-    // Past the edge the knob stops but the direction keeps updating, so you
-    // can swing your thumb around the rim to turn without letting go.
-    if (len > RADIUS) { dx = (dx / len) * RADIUS; dy = (dy / len) * RADIUS; }
-    setKnob(dx, dy);
-    const nx = dx / RADIUS, ny = dy / RADIUS;
-    const mag = Math.hypot(nx, ny);
-    if (mag < DEADZONE) { joy.x = 0; joy.y = 0; return; }
-    joy.x = nx;
-    joy.y = ny;
-  };
-
-  const end = (e) => {
-    if (active !== null && e.pointerId !== active) return;
-    active = null;
-    joy.x = 0; joy.y = 0;
-    knob.classList.add("releasing");
-    setKnob(0, 0);
-    setTimeout(() => knob.classList.remove("releasing"), 200);
-  };
-
-  stick.addEventListener("pointerdown", (e) => {
-    if (isPauseMenuOpen() || seated || focusedVinyl) return;
-    e.preventDefault();
-    active = e.pointerId;
-    stick.setPointerCapture(e.pointerId);  // keep tracking past the stick's edge
-    knob.classList.remove("releasing");
-    move(e);
-  });
-  stick.addEventListener("pointermove", (e) => {
-    if (active === null || e.pointerId !== active) return;
-    e.preventDefault();
-    move(e);
-  });
-  stick.addEventListener("pointerup", end);
-  stick.addEventListener("pointercancel", end);
-  stick.addEventListener("lostpointercapture", end);
-  window.addEventListener("blur", () => end({ pointerId: active }));
-  stick.addEventListener("contextmenu", (e) => e.preventDefault());
-})();
+// On-screen d-pad (touch only — see #mobile-controls). Each button just holds
+// the matching key down, so it goes through exactly the same movement path as
+// a real keyboard rather than being a second implementation that can drift.
+Object.entries({ "mc-w": "w", "mc-a": "a", "mc-s": "s", "mc-d": "d" }).forEach(([id, key]) => {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const down = (e) => { e.preventDefault(); pressKey(key); };
+  const up = (e) => { e.preventDefault(); releaseKey(key); };
+  btn.addEventListener("pointerdown", down);
+  btn.addEventListener("pointerup", up);
+  btn.addEventListener("pointercancel", up);
+  btn.addEventListener("pointerleave", up);
+  btn.addEventListener("contextmenu", (e) => e.preventDefault());
+});
 
 // ---------------------------------------------------------------- pause menu
 window.addEventListener("keydown", (e) => {
@@ -815,7 +757,6 @@ onPauseMenuChange((open) => {
     }
     pointerDownPos = null;
     moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
-    joy.x = 0; joy.y = 0;
   }
 });
 
