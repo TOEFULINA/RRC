@@ -51,6 +51,16 @@ export function renderTopNav(activeKey) {
     nav.appendChild(btn);
   });
 
+  // Explicit way back to the compass. The ✦ glyph at the far left of this bar
+  // was always the way home, but on a phone the bar sits under the browser's
+  // own toolbar and there are no arrow keys to fall back on — so this is a
+  // real, labelled button, parked next to RESUME where a back button belongs.
+  const back = document.createElement("button");
+  back.className = "rune nav-back";
+  back.textContent = "Back";
+  back.addEventListener("click", () => navigate("home"));
+  nav.appendChild(back);
+
   const clock = document.createElement("div");
   clock.className = "nav-clock";
   nav.appendChild(clock);

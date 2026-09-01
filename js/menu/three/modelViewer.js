@@ -264,7 +264,12 @@ export function mountModelViewer(
     // past the sphere's own silhouette and out of frame on rotation. Callers
     // that know their specific mesh is compact/round can pass a lower
     // fitMargin for a tighter default fill; unset defaults to this safe floor.
-    const margin = fitMargin ?? 1.03;
+    // On a phone the viewer is a fraction of the area it gets on a desktop, so
+    // the same framing leaves the model a stamp in the middle of the screen.
+    // Tightening the margin pulls the camera in; the safety floor above still
+    // applies proportionally, so an elongated mesh doesn't start clipping.
+    const narrow = window.matchMedia("(max-width: 860px)").matches;
+    const margin = (fitMargin ?? 1.03) * (narrow ? 0.8 : 1);
     const distance = (boundingSphere.radius / Math.sin(Math.min(vFov, hFov) / 2)) * margin;
 
     if (resetAngle) {

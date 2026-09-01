@@ -566,17 +566,18 @@ label[for],
   bottom: 0.75rem;
   left: 0.75rem;
   font-size: 0.7rem;
-  color: var(--ink-dim);
+  color: #fff;
+  opacity: 0.75;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
   letter-spacing: 0.08em;
 }
 
 .info-card {
+  position: relative;
   width: min(500px, 94%);
   flex-shrink: 0;
   align-self: center;
   aspect-ratio: 4279 / 1847;
-  background-image: url("/menu/ui/info-card-wide.png");
-  background-size: 100% 100%;
   /* Comfortably above the tallest this box ever renders at (~216px at its
      max 500px width) so it never clips in the normal state — only used as
      the collapse target below. */
@@ -589,7 +590,22 @@ label[for],
   opacity: 0;
   pointer-events: none;
 }
+/* The card art carries the panel's own transparency rather than sitting on
+   the scene as an opaque white slab. It's a separate layer, not `opacity` on
+   .info-card itself, because that would fade the text with it — only the
+   background is meant to let the room through. Alpha matches --panel. */
+.info-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/menu/ui/info-card-wide.png");
+  background-size: 100% 100%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .info-card-inner {
+  position: relative;
   height: 100%;
   padding: 7% 8%;
   display: flex;
@@ -920,7 +936,7 @@ label[for],
        dead space underneath. The cap is what creates the slack below the card
        instead of between the model and the card. */
     flex: 1 1 auto;
-    max-height: 62%;
+    max-height: 74%;
   }
   .info-card {
     container-type: inline-size;
@@ -1306,4 +1322,24 @@ label[for],
   letter-spacing: 0.09em;
   color: rgba(244, 249, 251, 0.66);
   text-shadow: 0 1px 3px rgba(10, 18, 26, 0.9);
+}
+
+
+/* The section nav's Back button. It lives in .top-nav (bottom bar) in the DOM
+   but is pulled up to the top-right corner, to the left of RESUME — that's
+   where a back control is looked for, and on a phone the bottom bar can end up
+   underneath the browser's own toolbar. */
+.top-nav .nav-back {
+  position: fixed;
+  top: clamp(0.6rem, 2.2vw, 1.1rem);
+  right: clamp(6.5rem, 22vw, 10.5rem);
+  z-index: 12;
+  padding: 0.35em 0.9em;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+@media (max-width: 860px) {
+  .top-nav .nav-back {
+    right: clamp(5.5rem, 26vw, 9rem);
+  }
 }
