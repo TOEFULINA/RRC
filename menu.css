@@ -1,3 +1,32 @@
+/* Pix32 — the site's pixel face. Subset from the original 5.4MB, 17k-glyph
+   CJK build down to Latin plus the handful of symbols this UI actually
+   renders (the compass glyph, the θ/φ readout, arrows, middot): 3.7KB, which
+   is what makes it safe to load on a phone alongside a 16MB room.
+
+   ONE SWITCH: --ui-font in :root below. Every font-family in this file goes
+   through it, so putting "Futura Condensed" back in front there reverts the
+   whole menu in a single edit. */
+@font-face {
+  font-family: "Pix32";
+  src: url("/menu/fonts/Pix32.woff2") format("woff2"),
+       url("/menu/fonts/Pix32.woff") format("woff");
+  font-weight: 100 900;
+  font-display: swap;
+}
+/* The squeezed cut: every glyph outline scaled to 78% on X with advances to
+   match, done in the font rather than with transform: scaleX(). A CSS
+   horizontal scale resamples the already-rasterised text and turns a pixel
+   face to mush; condensing the outlines lets the rasteriser snap stems to
+   whole pixels the way it does for any other font, so this stays crisp.
+   Swap "Pix32 Cond" for "Pix32" in --ui-font below for the wide cut. */
+@font-face {
+  font-family: "Pix32 Cond";
+  src: url("/menu/fonts/Pix32-Cond.woff2") format("woff2"),
+       url("/menu/fonts/Pix32-Cond.woff") format("woff");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 @font-face {
   font-family: "Futura Condensed";
   src: url("/menu/fonts/Futura Condensed Light.ttf") format("truetype");
@@ -18,6 +47,12 @@
 }
 
 :root {
+  /* THE font switch. Move "Pix32" behind "Futura Condensed" to revert the
+     whole site in one edit. (A cyclic var() here silently invalidates the
+     property and drops every element to the system face — so this line must
+     name real families, never itself.) */
+  --ui-font: "Pix32 Cond", "Pix32", "Futura Condensed", "Bahnschrift", "Arial Narrow", sans-serif;
+
   --ink: #eee7d6;
   --ink-dim: #b9b096;
   --line: rgba(238, 231, 214, 0.55);
@@ -64,7 +99,7 @@ textarea {
   height: 100%;
   background: #000;
   color: var(--ink);
-  font-family: "Futura Condensed", "Bahnschrift", "Arial Narrow", sans-serif;
+  font-family: var(--ui-font);
   font-weight: 300;
   overflow-x: hidden;
   cursor: url("/menu/cursors/logo-default.png") 0 0, auto;
@@ -154,9 +189,11 @@ label[for],
 /* ---------- shared type ---------- */
 
 .rune {
-  font-family: "Futura Condensed", "Bahnschrift", "Arial Narrow", sans-serif;
+  font-family: var(--ui-font);
   font-weight: 700;
-  letter-spacing: 0.18em;
+  /* Was 0.18em, set for Futura. On a condensed pixel face that much tracking
+     hands back every bit of width the narrower glyphs just saved. */
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -474,8 +511,13 @@ label[for],
 /* Only the category rail shows at first; the list + detail panes fade in
    once you've stepped right into them, and fade back out stepping back
    left — kept as opacity only (not width) so the layout never reflows. */
-.items-fullscreen:not(.expanded) .list-col,
-.items-fullscreen:not(.expanded) .detail-col {
+/* .expanded means "you've drilled past the category rail" — it's what reveals
+   the list and detail panes in Items. Magic has no list pane and no drill
+   step any more (see magicView.js): its collage is the first thing you should
+   see, so :not(.mirrored) keeps this gate off it entirely rather than having
+   Magic set a flag whose meaning it no longer has. */
+.items-fullscreen:not(.mirrored):not(.expanded) .list-col,
+.items-fullscreen:not(.mirrored):not(.expanded) .detail-col {
   opacity: 0;
   pointer-events: none;
 }
@@ -1024,7 +1066,7 @@ label[for],
   letter-spacing: 0.14em;
 }
 .stats-value {
-  font-family: "Futura Condensed", sans-serif;
+  font-family: var(--ui-font);
   font-weight: 700;
   letter-spacing: 0.04em;
   font-size: clamp(0.85rem, 2.4vw, 1.15rem);
@@ -1160,7 +1202,7 @@ label[for],
   text-align: center;
 }
 .skill-card h3 {
-  font-family: "Futura Condensed", sans-serif;
+  font-family: var(--ui-font);
   font-weight: 700;
   margin: 0;
   font-size: 1.15rem;
@@ -1343,3 +1385,40 @@ label[for],
     right: clamp(5.5rem, 26vw, 9rem);
   }
 }
+
+
+/* Pixel-face hygiene. A bitmap typeface has exactly one weight — letting the
+   browser synthesise bold smears the pixel grid sideways — and subpixel
+   antialiasing rounds the corners off every stem, which is the whole thing
+   you are looking at. Both off across the menu. */
+#pause-menu-root,
+#pause-menu-root * {
+  -webkit-font-smoothing: none;
+  font-synthesis: none;
+}
+
+
+/* ---------- magic: one rail, then the work ----------
+   The category rail is the only column now (see magicView.js), so the detail
+   side gets everything else. These override the Items-tuned values it was
+   sharing. */
+.items-fullscreen.mirrored .detail-col {
+  padding: clamp(1rem, 3vw, 2.5rem) clamp(1rem, 3vw, 3rem) clamp(3.5rem, 9vw, 6rem);
+}
+.items-fullscreen.mirrored .detail-col.gallery-mode {
+  justify-content: flex-start;
+}
+/* Back out of a single piece to the collage it came from. Sits above the
+   media, left-aligned with it. */
+.gallery-back {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  margin-bottom: 0.6rem;
+  padding: 0.35em 0.8em;
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  cursor: pointer;
+}
+.gallery-back:hover { color: #fff; }

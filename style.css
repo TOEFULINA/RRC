@@ -32,7 +32,7 @@ html, body {
   overflow: hidden;
   overscroll-behavior: none;
   background: #0d0b10;
-  font-family: 'Archivo', sans-serif;
+  font-family: var(--ui-font, 'Archivo', sans-serif);
   color: #f2ece2;
   /* Nothing on this page is meant to be copy-selected — it's a 3D scene
      with UI text laid over it, not a document. Without this, dragging to
@@ -112,7 +112,7 @@ html, body {
 
 .loading-sub {
   margin-top: 4px;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--ui-font, 'Helvetica Neue', Helvetica, Arial, sans-serif);
   letter-spacing: .1em;
   font-size: .95rem;
   font-weight: 700;
@@ -136,7 +136,7 @@ html, body {
 #intro-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 
 .menu-question {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--ui-font, 'Helvetica Neue', Helvetica, Arial, sans-serif);
   text-transform: uppercase;
   letter-spacing: .14em;
   font-size: 1.5rem;
@@ -152,7 +152,7 @@ html, body {
 }
 
 .menu-option {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--ui-font, 'Helvetica Neue', Helvetica, Arial, sans-serif);
   text-transform: uppercase;
   letter-spacing: .1em;
   font-size: .9rem;
@@ -169,7 +169,7 @@ html, body {
 .menu-option:hover { opacity: 1; border-bottom-color: #ffce6b; }
 
 .menu-note {
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--ui-font, 'Helvetica Neue', Helvetica, Arial, sans-serif);
   font-size: .78rem;
   letter-spacing: .04em;
   color: #f2ece2;
@@ -219,7 +219,7 @@ html, body {
   bottom: 9%;
   transform: translateX(-50%);
   z-index: 42;
-  font-family: 'Futura Condensed Medium', 'Oswald', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--ui-font, 'Futura Condensed Medium', 'Oswald', Arial, sans-serif);
   font-weight: 500;
   font-size: 1.4rem;
   letter-spacing: .015em;
@@ -455,7 +455,7 @@ html, body {
   opacity: .9;
 }
 #lightbox-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--ui-font, 'Space Grotesk', sans-serif);
   font-size: 1.4rem;
   margin: 0 0 10px;
 }

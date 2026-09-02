@@ -3,23 +3,20 @@ import { renderTopNav } from "./topNav.js";
 import { navigate } from "../router.js";
 import { fitTextToOneLine } from "../utils/fitTextToOneLine.js";
 
-// Same three-pane mechanic as itemsView.js (categories -> list -> detail),
-// mirrored to the right side of the screen since Magic is reached from the
-// compass's LEFT point:
+// TWO panes, not three: a category rail and the work itself.
 //
-//   compass --(<-)--> categories --(<-)--> project list
-//                 (->)<--                (->)<--
+//   compass --(<-)--> categories --> [ collage ] --(click)--> [ one piece ]
+//                 (->)<--                          (right/esc)<--
 //
-// i.e. left/right are swapped from Items — the mirrored layout puts
-// "deeper" content physically further left on screen, so pressing further
-// left keeps going deeper (matching the direction you entered from), and
-// right steps back out, eventually leaving to the compass.
+// Items needs its middle column because you pick a garment by name. Magic
+// doesn't — you pick a picture by looking at it. The old middle pane listed
+// "Illustration I, Illustration II, Illustration III", which is no
+// information at all, and it cost roughly a third of the screen that the
+// work could have been using. So picking a category now goes straight to
+// that category's collage, and a thumbnail opens the piece full size.
 //
-// Every category (plus a synthetic top-level "All" category) gets an "All"
-// entry prepended to its project list. Selecting that "All" entry doesn't
-// open a single project — it fills the detail pane with a condensed
-// thumbnail gallery of every piece in that list; clicking a thumbnail opens
-// it as a normal single item, same as picking it from the list directly.
+// Left/right stay swapped from Items: this menu is reached from the compass's
+// LEFT point and is mirrored, so right steps back out toward the compass.
 
 function getCategories() {
   return ["All", ...portfolioCategories.map((c) => c.name)];
@@ -29,11 +26,6 @@ function projectsInCategory(cat) {
   if (cat === "All") return portfolioCategories.flatMap((c) => c.projects);
   const found = portfolioCategories.find((c) => c.name === cat);
   return found ? found.projects : [];
-}
-
-function itemsInCategory(cat) {
-  const gallery = { id: `${cat}::all`, name: "All", isGallery: true, category: cat };
-  return [gallery, ...projectsInCategory(cat)];
 }
 
 export function renderMagicView(container) {
@@ -48,9 +40,6 @@ export function renderMagicView(container) {
     <div class="category-col">
       <div class="category-rows-viewport"><div class="category-rows"></div></div>
     </div>
-    <div class="list-col">
-      <div class="list-rows-viewport"><div class="list-col-inner"></div></div>
-    </div>
     <div class="detail-col"></div>
   `
   );
@@ -58,15 +47,11 @@ export function renderMagicView(container) {
   const categoryCol = el.querySelector(".category-col");
   const categoryRowsViewport = el.querySelector(".category-rows-viewport");
   const categoryRowsEl = el.querySelector(".category-rows");
-  const listCol = el.querySelector(".list-col");
-  const listRowsViewport = el.querySelector(".list-rows-viewport");
-  const listRowsEl = el.querySelector(".list-col-inner");
   const detailCol = el.querySelector(".detail-col");
 
   let categoryIndex = 0;
-  let itemIndex = 0;
-  let focusPane = "categories"; // "categories" | "list"
-  let currentList = itemsInCategory(categories[categoryIndex]);
+  // null = showing the category's collage; a project = showing that one piece.
+  let openPiece = null;
   let lastRenderedKey = null;
 
   function renderCategoryRows() {
@@ -77,27 +62,10 @@ export function renderMagicView(container) {
       row.textContent = cat;
       row.addEventListener("click", () => {
         categoryIndex = i;
-        currentList = itemsInCategory(categories[categoryIndex]);
-        itemIndex = 0;
-        focusPane = "list";
+        openPiece = null;
         render();
       });
       categoryRowsEl.appendChild(row);
-    });
-  }
-
-  function renderListRows() {
-    listRowsEl.innerHTML = "";
-    currentList.forEach((item, i) => {
-      const row = document.createElement("button");
-      row.className = "col-row" + (i === itemIndex ? " active" : "");
-      row.textContent = item.name;
-      row.addEventListener("click", () => {
-        itemIndex = i;
-        focusPane = "list";
-        render();
-      });
-      listRowsEl.appendChild(row);
     });
   }
 
@@ -107,8 +75,7 @@ export function renderMagicView(container) {
       : `<img class="magic-media" src="${item.full}" alt="${item.name}" />`;
   }
 
-  function renderGallery(item) {
-    const catName = item.category;
+  function renderGallery(catName) {
     const pieces = projectsInCategory(catName);
     detailCol.classList.add("gallery-mode");
     detailCol.innerHTML = `
@@ -126,11 +93,8 @@ export function renderMagicView(container) {
       thumb.innerHTML = `<img src="${piece.thumb}" alt="" loading="lazy" />`;
       thumb.setAttribute("aria-label", piece.name);
       thumb.addEventListener("click", () => {
-        const idx = currentList.findIndex((p) => p.id === piece.id);
-        if (idx !== -1) {
-          itemIndex = idx;
-          render();
-        }
+        openPiece = piece;
+        render();
       });
       grid.appendChild(thumb);
     });
@@ -139,6 +103,7 @@ export function renderMagicView(container) {
   function renderSingle(item) {
     detailCol.classList.remove("gallery-mode");
     detailCol.innerHTML = `
+      <button class="gallery-back rune">&lsaquo; ${item.category}</button>
       <div class="item-viewer">${mediaTag(item)}</div>
       <div class="info-card">
         <div class="info-card-inner">
@@ -154,16 +119,19 @@ export function renderMagicView(container) {
       </div>
     `;
     fitTextToOneLine(detailCol.querySelector(".info-name"));
+    detailCol.querySelector(".gallery-back").addEventListener("click", () => {
+      openPiece = null;
+      render();
+    });
   }
 
   function renderDetail() {
-    const item = currentList[itemIndex] || null;
-    if (!item) return;
-    const key = `${item.id}:${item.isGallery ? "gallery" : "single"}`;
-    if (key === lastRenderedKey) return; // avoid rebuilding + restarting video for no reason
+    const catName = categories[categoryIndex];
+    const key = openPiece ? `piece:${openPiece.id}` : `gallery:${catName}`;
+    if (key === lastRenderedKey) return; // don't rebuild + restart a video for nothing
     lastRenderedKey = key;
-    if (item.isGallery) renderGallery(item);
-    else renderSingle(item);
+    if (openPiece) renderSingle(openPiece);
+    else renderGallery(catName);
   }
 
   // Identical fixed-glyph/sliding-list carousel as Items — see itemsView.js.
@@ -178,31 +146,26 @@ export function renderMagicView(container) {
 
   function render() {
     renderCategoryRows();
-    renderListRows();
     renderDetail();
-    categoryCol.classList.toggle("focused", focusPane === "categories");
-    listCol.classList.toggle("focused", focusPane === "list");
-    el.classList.toggle("expanded", focusPane === "list");
+    categoryCol.classList.add("focused");
     centerActiveRow(categoryRowsViewport, categoryRowsEl);
-    centerActiveRow(listRowsViewport, listRowsEl);
   }
 
   function moveSelection(delta) {
-    if (focusPane === "categories") {
-      const next = Math.min(categories.length - 1, Math.max(0, categoryIndex + delta));
-      if (next === categoryIndex) return;
-      categoryIndex = next;
-      currentList = itemsInCategory(categories[categoryIndex]);
-      itemIndex = 0;
-    } else {
-      const next = Math.min(currentList.length - 1, Math.max(0, itemIndex + delta));
-      if (next === itemIndex) return;
-      itemIndex = next;
-    }
+    const next = Math.min(categories.length - 1, Math.max(0, categoryIndex + delta));
+    if (next === categoryIndex) return;
+    categoryIndex = next;
+    openPiece = null;
     render();
   }
 
   function onKeyDown(e) {
+    if (e.key === "Escape" && openPiece) {
+      e.preventDefault();
+      openPiece = null;
+      render();
+      return;
+    }
     if (!["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(e.key)) return;
     e.preventDefault();
     // This view owns arrow keys fully while mounted — stop the global
@@ -221,14 +184,11 @@ export function renderMagicView(container) {
       // stepping further left continues into it (matching the direction
       // you entered from), and right steps back out toward the compass.
       case "ArrowLeft":
-        if (focusPane === "categories") {
-          focusPane = "list";
-          render();
-        }
         break;
       case "ArrowRight":
-        if (focusPane === "list") {
-          focusPane = "categories";
+        // One piece open -> back to its collage; collage -> out to the compass.
+        if (openPiece) {
+          openPiece = null;
           render();
         } else {
           navigate("home");
@@ -240,7 +200,6 @@ export function renderMagicView(container) {
 
   function onResize() {
     centerActiveRow(categoryRowsViewport, categoryRowsEl);
-    centerActiveRow(listRowsViewport, listRowsEl);
   }
   window.addEventListener("resize", onResize);
 
@@ -251,15 +210,9 @@ export function renderMagicView(container) {
   // into this route, layout can still be mid-settle at the instant render()
   // above measures it, silently skipping centering. Re-run it after the
   // next paint and once fonts finish loading.
-  requestAnimationFrame(() => {
-    centerActiveRow(categoryRowsViewport, categoryRowsEl);
-    centerActiveRow(listRowsViewport, listRowsEl);
-  });
+  requestAnimationFrame(() => centerActiveRow(categoryRowsViewport, categoryRowsEl));
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => {
-      centerActiveRow(categoryRowsViewport, categoryRowsEl);
-      centerActiveRow(listRowsViewport, listRowsEl);
-    });
+    document.fonts.ready.then(() => centerActiveRow(categoryRowsViewport, categoryRowsEl));
   }
 
   return () => {

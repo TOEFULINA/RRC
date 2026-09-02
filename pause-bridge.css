@@ -45,9 +45,11 @@ body.paused #pause-open-btn {
 
 /* ---------- pause open / close buttons ---------- */
 
+/* --ui-font is declared on menu.css's :root, so it resolves here too — these
+   two buttons sit outside #pause-menu-root but inherit from the document. */
 #pause-open-btn,
 #pause-close-btn {
-  font-family: "Futura Condensed", "Bahnschrift", "Arial Narrow", sans-serif;
+  font-family: var(--ui-font);
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -136,8 +138,16 @@ body.paused #pause-open-btn {
 
    The 3D canvases get the filter a second time, which cancels it exactly, so
    the portfolio objects keep looking like themselves. */
+/* The inversion is applied to #app and then AGAIN to anything inside it that
+   must come out true to source — a second identical filter is its own inverse,
+   so those elements land back on their real colours while everything around
+   them stays flipped. The 3D canvases were already on this list. The portfolio
+   media joins it: the chrome is meant to read as a negative, the work is not.
+   Photographs of a person's actual clothes are not a design element to invert. */
 #pause-menu-root.menu-inverted #app,
-#pause-menu-root.menu-inverted #app canvas {
+#pause-menu-root.menu-inverted #app canvas,
+#pause-menu-root.menu-inverted #app .magic-media,
+#pause-menu-root.menu-inverted #app .gallery-thumb img {
   filter: invert(1) hue-rotate(180deg);
 }
 
@@ -250,8 +260,14 @@ body {
    room for chunks — it just loses its tapered ends and becomes a plain bar.
    Not done to the l-/r- selector panels either: they're flat dark fields with
    a hairline border, so there's nothing to pixelate and the edge only goes
-   ragged. */
-#pause-menu-root .info-card {
+   ragged.
+
+   Targets ::before, not .info-card itself — the card art was moved onto that
+   pseudo-element so it could carry the panel's transparency without fading the
+   text with it, and background-size: 100% 100% went with it. Setting the image
+   on .info-card here left this 290px file painting at its natural size and
+   repeating, which tiled four corner motifs into the middle of the card. */
+#pause-menu-root .info-card::before {
   background-image: url("/menu/ui/info-card-wide-px.png");
   image-rendering: pixelated;
   image-rendering: crisp-edges;
@@ -280,4 +296,16 @@ body {
 #pause-menu-root .list-col {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+}
+
+
+/* Same pixel-face hygiene as the menu (see menu.css): no synthesised bold, no
+   antialiasing rounding the stems off. */
+#pause-open-btn,
+#pause-close-btn,
+.map-label,
+.map-place,
+.map-hint {
+  -webkit-font-smoothing: none;
+  font-synthesis: none;
 }
