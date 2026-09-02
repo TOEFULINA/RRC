@@ -517,6 +517,7 @@ export const items = [
   {
     ...placeholder("item-32", "Raw Beef Set", "Nail Sets"),
     model: "/menu/models/beef-nails.glb",
+    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
@@ -527,6 +528,7 @@ export const items = [
   {
     ...placeholder("item-33", "Raw Pork Set", "Nail Sets"),
     model: "/menu/models/pork-nails.glb",
+    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },

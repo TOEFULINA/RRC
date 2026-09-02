@@ -64,36 +64,140 @@ html, body {
 #scene.hovering,
 #scene.hovering-seat { cursor: pointer; }
 
-/* ---------- loading screen ---------- */
+/* ---------- loading screen: 9x fatal exception ---------- */
+/* The reference is a photograph of a CRT, not a screenshot, and that's most of
+   why it reads the way it does — the blue is lifted and slightly violet from
+   the phosphor, the text has scanlines through it and grain over it, and the
+   corners fall off. Those four things are the whole effect; the layout alone
+   just looks like a blue page. */
 #loading-screen {
   position: fixed;
   inset: 0;
   z-index: 50;
-  /* No-signal TV blue. */
-  background: #0b3f96;
+  /* Not the canonical #0000AA — that's the framebuffer value, and nobody ever
+     saw it. This is the colour a CRT actually threw at the room. */
+  background: #3b3bc4;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: opacity .6s ease;
+  overflow: hidden;
 }
 #loading-screen.hidden { opacity: 0; pointer-events: none; }
-.loading-inner { text-align: center; }
-/* The canvas's drawing buffer is 72x72; this stretches it to 240 and tells the
+
+.loading-inner {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 88vw);
+  text-align: center;
+  font-family: 'VCR OSD Mono', 'Courier New', monospace;
+  color: #e8e8f8;
+  font-size: clamp(0.72rem, 1.9vw, 1.02rem);
+  line-height: 1.5;
+  /* The glow is what sells "emitting light" over "printed on paper". */
+  text-shadow: 0 0 6px rgba(190, 200, 255, 0.45);
+}
+
+/* Inverse video: the one element that isn't blue-on-white. */
+.bsod-chip {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 1.9em;
+  padding: 0.1em 0.7em;
+  background: #c8c8d8;
+  color: #3b3bc4;
+  letter-spacing: 0.12em;
+  text-shadow: none;
+}
+
+.bsod-prompt {
+  margin-top: 1.6em;
+  opacity: 0.85;
+}
+.bsod-caret { animation: bsod-blink 1.06s steps(1, end) infinite; }
+@keyframes bsod-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+
+/* The canvas's drawing buffer is 72x72; this stretches it and tells the
    browser not to smooth it, which is where the chunky pixels come from. */
 #loading-spin {
   display: block;
-  width: 240px;
-  height: 240px;
-  margin: 0 auto 20px;
+  width: 190px;
+  height: 190px;
+  margin: 0 auto;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 @media (max-width: 520px) {
-  #loading-spin { width: 168px; height: 168px; }
+  #loading-spin { width: 130px; height: 130px; }
 }
-/* Kept in the DOM but normally empty: the percentage is gone, and this is now
-   only ever written to if the model fails to load, so a failure still says so
-   instead of leaving you on a blue screen forever. */
+
+/* ---- CRT ---- */
+/* Scanlines are drawn in device pixels via a hairline gradient rather than as
+   an image, so they stay one pixel on a retina screen instead of blurring into
+   a flat grey wash. */
+.crt-scan,
+.crt-grain,
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.crt-scan {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 40, 0.13) 0px,
+    rgba(0, 0, 40, 0.13) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+}
+/* Phosphor grain: an inline SVG feTurbulence, so there's no image to download
+   and no seam to tile. */
+.crt-grain {
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'>\
+<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/>\
+</filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+  background-size: 140px 140px;
+  animation: crt-jitter 0.6s steps(3, end) infinite;
+}
+/* A slow shuffle of the grain — a still noise layer reads as texture on glass,
+   a moving one reads as a live signal. */
+@keyframes crt-jitter {
+  0%   { background-position: 0 0; }
+  33%  { background-position: -37px 21px; }
+  66%  { background-position: 23px -31px; }
+  100% { background-position: 0 0; }
+}
+.crt-vignette {
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(0, 0, 0, 0) 58%,
+    rgba(0, 0, 0, 0.16) 86%,
+    rgba(0, 0, 0, 0.34) 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt-grain { animation: none; }
+  .bsod-caret { animation: none; }
+}
+
+/* Kept in the DOM but normally empty: only ever written to if the model fails
+   to load, so a failure still says so instead of leaving you on blue forever. */
+.loading-sub {
+  margin-top: 0.8em;
+  text-align: center;
+  font-family: 'VCR OSD Mono', 'Courier New', monospace;
+  letter-spacing: .1em;
+  font-size: .9em;
+  color: #ffd7d7;
+}
+
 /* Sits at the bottom of the blue, not with the shoe — a broadcast byline
    rather than a caption. */
 .loading-byline {
@@ -101,6 +205,7 @@ html, body {
   left: 0;
   right: 0;
   bottom: max(22px, env(safe-area-inset-bottom, 0px));
+  z-index: 3;
   text-align: center;
   font-family: 'VCR OSD Mono', 'Courier New', monospace;
   font-size: 0.72rem;
@@ -108,16 +213,6 @@ html, body {
   color: #cfe0ff;
   opacity: 0.75;
   pointer-events: none;
-}
-
-.loading-sub {
-  margin-top: 4px;
-  font-family: var(--ui-font, 'Helvetica Neue', Helvetica, Arial, sans-serif);
-  letter-spacing: .1em;
-  font-size: .95rem;
-  font-weight: 700;
-  color: #dbe6ff;
-  opacity: .9;
 }
 
 /* ---------- intro overlay (start menu) ---------- */

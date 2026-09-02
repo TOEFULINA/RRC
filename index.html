@@ -4,23 +4,37 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>the room — portfolio</title>
-<link rel="stylesheet" href="style.css?v=2026-09-02sp1" />
+<link rel="stylesheet" href="style.css?v=2026-09-02bsod2" />
 <!-- Ported Skyrim-compass portfolio, scoped to #pause-menu-root only (see
      menu.css's own header comments for how the scoping works) — it does
      NOT affect anything above. -->
-<link rel="stylesheet" href="menu.css?v=2026-09-02sp1" />
+<link rel="stylesheet" href="menu.css?v=2026-09-02bsod2" />
 <!-- Glue styles new to this combined project: pause button, the room's
      blur/dim-on-pause filter, and #pause-menu-root's own fade transition. -->
-<link rel="stylesheet" href="pause-bridge.css?v=2026-09-02sp1" />
+<link rel="stylesheet" href="pause-bridge.css?v=2026-09-02bsod2" />
 </head>
 <body>
 
+  <!-- Loading screen. The 9x error-screen reference is carried by the blue,
+       the mono type, the inverse-video chip and the CRT pass — not by a wall
+       of fake error text, which buried the shoe. -->
   <div id="loading-screen">
     <div class="loading-inner">
+      <div class="bsod-chip">TOEFU LINA</div>
+
       <!-- Rendered at 72x72 and blown up by CSS - see js/loaderSpin.js -->
       <canvas id="loading-spin" width="72" height="72"></canvas>
+
+      <div class="bsod-prompt">Press any key to continue <span class="bsod-caret">_</span></div>
       <div class="loading-sub"></div>
     </div>
+
+    <!-- Scanlines, phosphor grain and a corner vignette. Purely decorative and
+         pointer-events:none, so nothing here can swallow a click. -->
+    <div class="crt-scan" aria-hidden="true"></div>
+    <div class="crt-grain" aria-hidden="true"></div>
+    <div class="crt-vignette" aria-hidden="true"></div>
+
     <div class="loading-byline">TOEFU LINA 2026</div>
   </div>
 
@@ -68,7 +82,7 @@
   }
   </script>
 
-  <script type="module" src="js/main.js?v=2026-09-02sp1"></script>
-  <script type="module" src="js/menu/main.js?v=2026-09-02sp1"></script>
+  <script type="module" src="js/main.js?v=2026-09-02bsod2"></script>
+  <script type="module" src="js/menu/main.js?v=2026-09-02bsod2"></script>
 </body>
 </html>
