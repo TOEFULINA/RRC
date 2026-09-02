@@ -507,6 +507,7 @@ export const items = [
   // Nail Sets
   {
     ...placeholder("item-32", "Raw Beef Set", "Nail Sets"),
+    model: "/menu/models/beef-nails.glb",
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },
@@ -515,6 +516,7 @@ export const items = [
   },
   {
     ...placeholder("item-33", "Raw Pork Set", "Nail Sets"),
+    model: "/menu/models/pork-nails.glb",
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },
