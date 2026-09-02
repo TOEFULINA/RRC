@@ -22,12 +22,12 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 // Swap this for any file in menu/models/ — everything below reframes itself
 // around whatever shape turns up.
-// A loader-only cut of the Sticker Print Boots: normal maps dropped, textures
-// at 128px, geometry at 4%. The full item model is 6.8MB and 428k triangles,
-// which is absurd for something drawn into a 72x72 buffer — this is 216KB and
-// 1.3MB of GPU. Swap this line for any other file in menu/models/ and
-// everything below reframes itself around whatever turns up.
-const SPIN_MODEL = "menu/models/loader-boots.glb";
+// A loader-only cut of the Beef Clog: normal maps dropped, textures at 128px,
+// geometry at 4%. The full item model is 1.4MB and 308k triangles, which is
+// absurd for something drawn into a 72x72 buffer — this is 83KB and 0.6MB of
+// GPU. Build a new one with loadermodel.mjs, then swap this line; everything
+// below reframes itself around whatever shape turns up.
+const SPIN_MODEL = "menu/models/loader-clog.glb";
 
 const SPIN_SPEED = 0.7;      // radians/sec around Y
 const TUMBLE = 0.16;         // radians of slow nod, so it isn't a flat turntable

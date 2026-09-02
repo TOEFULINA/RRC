@@ -222,7 +222,7 @@ export function renderSkillsView(container) {
   // — the global handler in main.js already returns Down to the compass
   // (skills is the "top" direction), and nothing here needs Up/Down for
   // anything else, so there's no conflict to guard against the way
-  // items/magic have to for their own Up/Down-driven row navigation.
+  // items/portfolio have to for their own Up/Down-driven row navigation.
   function onKeyDown(e) {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     e.preventDefault();

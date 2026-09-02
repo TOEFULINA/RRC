@@ -146,13 +146,13 @@ body.paused #pause-open-btn {
    Photographs of a person's actual clothes are not a design element to invert. */
 #pause-menu-root.menu-inverted #app,
 #pause-menu-root.menu-inverted #app canvas,
-#pause-menu-root.menu-inverted #app .magic-media,
+#pause-menu-root.menu-inverted #app .portfolio-media,
 #pause-menu-root.menu-inverted #app .gallery-thumb img {
   filter: invert(1) hue-rotate(180deg);
 }
 
 /* ---- compass point labels: white ------------------------------------------
-   SKILLS / ITEMS / MAP / MAGIC.
+   SKILLS / ITEMS / MAP / PORTFOLIO.
 
    The colour is stated twice on purpose. #app is run through
    invert(1) hue-rotate(180deg) when the menu is inverted, so whatever colour

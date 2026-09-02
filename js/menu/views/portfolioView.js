@@ -8,7 +8,7 @@ import { fitTextToOneLine } from "../utils/fitTextToOneLine.js";
 //   compass --(<-)--> categories --> [ collage ] --(click)--> [ one piece ]
 //                 (->)<--                          (right/esc)<--
 //
-// Items needs its middle column because you pick a garment by name. Magic
+// Items needs its middle column because you pick a garment by name. Portfolio
 // doesn't — you pick a picture by looking at it. The old middle pane listed
 // "Illustration I, Illustration II, Illustration III", which is no
 // information at all, and it cost roughly a third of the screen that the
@@ -28,12 +28,12 @@ function projectsInCategory(cat) {
   return found ? found.projects : [];
 }
 
-export function renderMagicView(container) {
+export function renderPortfolioView(container) {
   const categories = getCategories();
 
   const el = document.createElement("div");
   el.className = "items-fullscreen mirrored";
-  el.appendChild(renderTopNav("magic"));
+  el.appendChild(renderTopNav("portfolio"));
   el.insertAdjacentHTML(
     "beforeend",
     `
@@ -71,8 +71,8 @@ export function renderMagicView(container) {
 
   function mediaTag(item) {
     return item.kind === "video"
-      ? `<video class="magic-media" src="${item.full}" poster="${item.thumb}" controls loop muted playsinline></video>`
-      : `<img class="magic-media" src="${item.full}" alt="${item.name}" />`;
+      ? `<video class="portfolio-media" src="${item.full}" poster="${item.thumb}" controls loop muted playsinline></video>`
+      : `<img class="portfolio-media" src="${item.full}" alt="${item.name}" />`;
   }
 
   function renderGallery(catName) {

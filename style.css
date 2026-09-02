@@ -496,3 +496,75 @@ html, body {
   #lightbox-prev { left: 6px; }
   #lightbox-next { right: 6px; }
 }
+
+/* ---------- crate flippers ----------
+   Shown only while a record is pulled out of the crate. Sits low and centred,
+   clear of the d-pad in the bottom-left and the MENU button top-right. */
+#vinyl-nav {
+  position: fixed;
+  left: 50%;
+  bottom: max(6vh, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%) translateY(8px);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .28s ease, transform .28s ease, visibility 0s linear .28s;
+}
+#vinyl-nav.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity .28s ease, transform .28s ease, visibility 0s;
+}
+#vinyl-nav button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(8, 8, 6, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(3px);
+  transition: background .18s ease, transform .18s ease;
+}
+#vinyl-nav button:hover,
+#vinyl-nav button:focus-visible {
+  background: rgba(8, 8, 6, 0.68);
+  transform: scale(1.06);
+}
+#vinyl-nav button:active { transform: scale(0.96); }
+#vinyl-nav svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+#vinyl-count {
+  min-width: 4.5ch;
+  text-align: center;
+  font-family: 'VCR OSD Mono', 'Courier New', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+  user-select: none;
+}
+/* Bigger tap targets on a phone, and lifted clear of the d-pad. */
+@media (max-width: 860px) {
+  #vinyl-nav {
+    bottom: max(11vh, env(safe-area-inset-bottom, 0px));
+    gap: 1.4rem;
+  }
+  #vinyl-nav button { width: 52px; height: 52px; }
+  #vinyl-nav svg { width: 24px; height: 24px; }
+}

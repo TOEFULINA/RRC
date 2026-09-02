@@ -153,11 +153,32 @@ label[for],
      backdrop now moves in lockstep with the icons' heavy, decelerating
      swing instead of drifting on its own lighter timing. */
   transition: background-position 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  background-size: 320% auto;
+  /* Sized by HEIGHT, not width. `320% auto` derives the height from the
+     width, and this panorama is 2.6:1 — so on a tall phone the image ended
+     up shorter than the element and the browser TILED it, which is the seam
+     you could see. Driving off height means it always covers, whatever the
+     aspect, and it has the side benefit of making the pixel size consistent
+     across devices instead of growing with the window. */
+  background-repeat: no-repeat;
+  background-size: auto 130%;
+  /* NO TRANSFORM. This is the thing that was making it look blurry: a CSS
+     transform rasterises the element and then resamples that bitmap
+     bilinearly, so scale(1.02) — and scale(1.8) on mobile — smoothed the
+     nearest-neighbour texels straight back into a gradient after
+     image-rendering had done its job. Any zoom has to happen in
+     background-size, which is painted with image-rendering honoured. */
+  transform: none;
   /* Crisp, not the moody blurred treatment every other screen's shared
      backdrop gets — this is meant to read as an actual scene, not an
      ambient wash behind a panel. Regular brightness, no dark overlay. */
   filter: saturate(1.05);
+  /* Hard texels on the upscale. Without this the browser bilinear-filters the
+     880px source back into a smooth gradient and the whole point is lost.
+     `pixelated` goes LAST: later declarations win, and Chrome's crisp-edges
+     does not always give nearest-neighbour on a background image. */
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
   /* Held back and revealed slowly instead of swapping in instantly on
      navigation — the scene shouldn't be visible before the constellation
      itself is. Delayed to start around when .skills-carousel's own
@@ -167,15 +188,11 @@ label[for],
   animation: skills-bg-reveal 2s ease-out both;
   animation-delay: 0.75s;
 }
+/* Opacity only — see the transform note in #bg-layer.bg-panning. Animating
+   scale here left the layer permanently resampled at its end value. */
 @keyframes skills-bg-reveal {
-  from {
-    opacity: 0;
-    transform: scale(1.16);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1.02);
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 #bg-overlay {
@@ -559,10 +576,10 @@ label[for],
    once you've stepped right into them, and fade back out stepping back
    left — kept as opacity only (not width) so the layout never reflows. */
 /* .expanded means "you've drilled past the category rail" — it's what reveals
-   the list and detail panes in Items. Magic has no list pane and no drill
-   step any more (see magicView.js): its collage is the first thing you should
+   the list and detail panes in Items. Portfolio has no list pane and no drill
+   step any more (see portfolioView.js): its collage is the first thing you should
    see, so :not(.mirrored) keeps this gate off it entirely rather than having
-   Magic set a flag whose meaning it no longer has. */
+   Portfolio set a flag whose meaning it no longer has. */
 .items-fullscreen:not(.mirrored):not(.expanded) .list-col,
 .items-fullscreen:not(.mirrored):not(.expanded) .detail-col {
   opacity: 0;
@@ -849,9 +866,9 @@ label[for],
   border-color: rgba(238, 231, 214, 0.7);
 }
 
-/* ---------- magic: same menu mechanic as items, mirrored to the right ---------- */
+/* ---------- portfolio: same menu mechanic as items, mirrored to the right ---------- */
 /* Items opens from the compass's right point and grows rightward (rail on
-   the left, using the l-*.png panel art). Magic opens from the left
+   the left, using the l-*.png panel art). Portfolio opens from the left
    point, so the whole thing is flipped: rail hugs the right edge, the
    list/detail panes grow toward the left, and it uses the r-*.png panel
    art instead — a pre-made mirror of the same art, glyph pointing the
@@ -881,10 +898,10 @@ label[for],
   text-align: right;
 }
 
-/* Real artwork/video in the Magic detail pane, in place of Items' 3D
+/* Real artwork/video in the Portfolio detail pane, in place of Items' 3D
    viewer — same .item-viewer box (sizing/position untouched), just filled
    with an image or video instead of a canvas. */
-.item-viewer .magic-media {
+.item-viewer .portfolio-media {
   display: block;
   width: 100%;
   height: 100%;
@@ -999,6 +1016,12 @@ label[for],
     transform: scale(1.8);
     transform-origin: 50% 60%;
   }
+  /* Skills is the exception: it gets its zoom from background-size so the
+     texels survive (a transform would resample them), and pushed further in
+     than desktop so a phone shows a smaller slice of the panorama. */
+  #bg-layer.bg-panning {
+    background-size: auto 200%;
+  }
 }
 
 /* Mobile only: tapping the 3D model already collapses the info card (see
@@ -1080,7 +1103,7 @@ label[for],
 }
 
 /* ---------- skills: constellation carousel ---------- */
-/* Full-screen, like items/magic — a character-stat-style bar on top (see
+/* Full-screen, like items/portfolio — a character-stat-style bar on top (see
    renderStatsBar in skillsView.js for why it shows different fields than
    the game's own Name/Level/Race), the constellation ring in the middle,
    the same bottom nav every screen uses underneath, untouched. */
@@ -1331,7 +1354,7 @@ label[for],
   text-shadow: 0 0 14px rgba(238, 231, 214, 0.6);
 }
 
-/* ---------- placeholder screens (magic / map) ---------- */
+/* ---------- placeholder screens (portfolio / map) ---------- */
 
 .placeholder-panel {
   max-width: 60ch;
@@ -1477,8 +1500,8 @@ label[for],
 }
 
 
-/* ---------- magic: one rail, then the work ----------
-   The category rail is the only column now (see magicView.js), so the detail
+/* ---------- portfolio: one rail, then the work ----------
+   The category rail is the only column now (see portfolioView.js), so the detail
    side gets everything else. These override the Items-tuned values it was
    sharing. */
 .items-fullscreen.mirrored .detail-col {

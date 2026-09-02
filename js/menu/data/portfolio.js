@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Magic section content — real portfolio pieces, ingested from the source
+// Portfolio section content — real pieces, ingested from the source
 // folders in ~/skyrim/{illustration, 3d portfolio, graphic design, dynamic,
 // merchandise}.
 //
@@ -17,7 +17,7 @@
 //
 // The data shape is unchanged: each category is a list of "projects", and
 // every category (plus the top-level view) gets an synthesized "All" entry
-// prepended by the view logic — see magicView.js — rather than stored here.
+// prepended by the view logic — see portfolioView.js — rather than stored here.
 //
 // "dynamic" is video (kind: "video"); everything else is a still image
 // (kind: "image"). Both carry a full-size asset for the detail pane and a

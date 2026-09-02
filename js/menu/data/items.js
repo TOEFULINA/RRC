@@ -278,6 +278,7 @@ export const items = [
   },
   {
     ...placeholder("item-47", "Deco Self Portrait Case", "Accessories"),
+    viewerStartAngle: { thetaDeg: 9.6, phiDeg: 94.1 },
     model: "/menu/models/self-portrait-case.glb",
     stats: [
       { label: "Year", value: "2024" },
@@ -287,6 +288,8 @@ export const items = [
   },
   {
     ...placeholder("item-13", "Deco Majora's Mask Case", "Accessories"),
+    viewerFitMargin: 0.8,
+    viewerStartAngle: { thetaDeg: 6.7, phiDeg: 84.8 },
     model: "/menu/models/majoras-mask-case.glb",
     stats: [
       { label: "Year", value: "2024" },

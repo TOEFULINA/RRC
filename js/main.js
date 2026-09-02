@@ -33,7 +33,8 @@ import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseSta
 import { navigate, getCurrentRoute } from "./menu/router.js";
 import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01d1";
 import { initRainAudio, toggleRainAudio } from "./rainAudio.js?v=2026-09-01d1";
-import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox } from "./vinyl.js?v=3";
+import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox,
+         vinylNeighbour, vinylIndexOf, vinylCount } from "./vinyl.js?v=4";
 import { startLoaderSpin, stopLoaderSpin } from "./loaderSpin.js";
 
 // Bumped whenever the .glb changes. The browser will happily keep serving a
@@ -319,8 +320,17 @@ function toMirror() {
   return new THREE.MeshStandardMaterial({
     color: 0xf4f6f9,
     metalness: 1.0,   // fully metal = pure reflection, no diffuse
-    roughness: 0.05,  // near-perfect; raise for an older, foggier mirror
+    roughness: 0.0,   // perfectly sharp; raise for an older, foggier mirror
     envMapIntensity: 2.2,
+    // The mirror slab is an 8-vertex box carrying POSITION and nothing else —
+    // no NORMAL attribute, same as the windowpane. Without one the shader has
+    // no surface direction to reflect around and falls back to a normal
+    // pointing straight at the camera, so the reflection sits still while you
+    // move instead of sweeping across the glass. flatShading derives the real
+    // normal from the geometry per fragment, which is what makes it read as a
+    // mirror at all — and it matters MORE at roughness 0, because there's no
+    // blur left to hide a wrong normal behind.
+    flatShading: true,
   });
 }
 
@@ -541,8 +551,8 @@ const VINYL_FOCUS_FOV = 34;
 const VINYL_FOCUS_FILL = 0.82;   // fraction of frame height the cover fills
 let focusedVinyl = null;
 
-function focusVinyl(mover) {
-  if (focusedVinyl || seated || camTween) return;
+function focusVinyl(mover, stepping) {
+  if ((focusedVinyl && !stepping) || seated || camTween) return;
   mover.updateMatrixWorld(true);
   // The RISEN centre, not the current one — see vinylFocusBox.
   const { centre, size } = vinylFocusBox(mover);
@@ -561,7 +571,12 @@ function focusVinyl(mover) {
   const pos = centre.clone().addScaledVector(face, dist);
 
   const dir = centre.clone().sub(pos).normalize();
-  preSeat = { pos: camera.position.clone(), yaw: lookYaw, pitch: lookPitch, fov: camera.fov };
+  // Only remember where you were standing on the way IN. Stepping between
+  // covers must not overwrite it, or backing out drops you in front of the
+  // crate instead of where you were when you first clicked.
+  if (!stepping) {
+    preSeat = { pos: camera.position.clone(), yaw: lookYaw, pitch: lookPitch, fov: camera.fov };
+  }
   focusedVinyl = mover;
   setVinylSelected(mover);          // hold it fully out of the crate
   moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
@@ -571,7 +586,50 @@ function focusVinyl(mover) {
     pitch: Math.asin(THREE.MathUtils.clamp(dir.y, -1, 1)),
     fov: VINYL_FOCUS_FOV,
   }, null);
+  updateVinylNav();
 }
+
+// Flip to the next/previous record without leaving the crate. The old record
+// drops back into its slot as the new one lifts out, so the two moves read as
+// one gesture rather than a close and a reopen.
+function stepVinyl(dir) {
+  if (!focusedVinyl || camTween) return;
+  const next = vinylNeighbour(focusedVinyl, dir);
+  if (!next || next === focusedVinyl) return;
+  focusVinyl(next, true);
+}
+
+// ---- the on-screen flippers ----
+// Real buttons rather than a keys-only affordance: this is reachable on a
+// phone, where there are no arrow keys, and the crate is the one place in the
+// room where there's a sequence to move through.
+const vinylNav = document.getElementById("vinyl-nav");
+const vinylNavPrev = document.getElementById("vinyl-prev");
+const vinylNavNext = document.getElementById("vinyl-next");
+const vinylNavCount = document.getElementById("vinyl-count");
+
+function updateVinylNav() {
+  if (!vinylNav) return;
+  const on = !!focusedVinyl;
+  vinylNav.classList.toggle("show", on);
+  if (on && vinylNavCount) {
+    vinylNavCount.textContent = `${vinylIndexOf(focusedVinyl)} / ${vinylCount()}`;
+  }
+}
+
+// stopPropagation, or the canvas's own pointerup sees the click as "clicked
+// away from the record" and closes the whole thing.
+vinylNavPrev?.addEventListener("pointerup", (e) => { e.stopPropagation(); stepVinyl(-1); });
+vinylNavNext?.addEventListener("pointerup", (e) => { e.stopPropagation(); stepVinyl(1); });
+[vinylNavPrev, vinylNavNext].forEach((b) =>
+  b?.addEventListener("pointerdown", (e) => e.stopPropagation()));
+
+window.addEventListener("keydown", (e) => {
+  if (!focusedVinyl || isPauseMenuOpen()) return;
+  if (e.key === "ArrowLeft") { e.preventDefault(); stepVinyl(-1); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); stepVinyl(1); }
+  else if (e.key === "Escape") { e.preventDefault(); unfocusVinyl(); }
+});
 
 function unfocusVinyl() {
   if (!focusedVinyl || camTween || !preSeat) return;
@@ -580,6 +638,7 @@ function unfocusVinyl() {
   const back = { pos: preSeat.pos, yaw: preSeat.yaw, pitch: preSeat.pitch, fov: preSeat.fov };
   preSeat = null;
   startCamTween(back, null);
+  updateVinylNav();
 }
 
 function setSeatHover(on) {

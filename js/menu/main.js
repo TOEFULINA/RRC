@@ -4,7 +4,7 @@ import { isPauseMenuOpen } from "../pauseState.js";
 import { renderCompassHome } from "./views/compassHome.js";
 import { renderItemsView } from "./views/itemsView.js";
 import { renderSkillsView } from "./views/skillsView.js";
-import { renderMagicView } from "./views/magicView.js";
+import { renderPortfolioView } from "./views/portfolioView.js";
 import { renderMapView } from "./views/mapView.js";
 
 // bg-layer's --bg-image isn't set here anymore - the standalone
@@ -19,7 +19,7 @@ const routes = {
   home: renderCompassHome,
   items: renderItemsView,
   skills: renderSkillsView,
-  magic: renderMagicView,
+  portfolio: renderPortfolioView,
   map: renderMapView,
 };
 
@@ -76,10 +76,10 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Items and Magic each have their own internal panes (categories ->
+  // Items and Portfolio each have their own internal panes (categories ->
   // list) and own their full arrow-key handling, including their own way
   // back to the compass — don't double-handle it here.
-  if (current === "items" || current === "magic") return;
+  if (current === "items" || current === "portfolio") return;
 
   const currentDir = ROUTE_TO_DIR[current];
   if (currentDir && OPPOSITE_DIR[currentDir] === dir) {

@@ -30,7 +30,7 @@ function formatGameClock(date) {
 }
 
 // Slim persistent nav shown on every section screen so you can jump
-// directly between Skills / Items / Map / Magic without going back
+// directly between Skills / Items / Map / Portfolio without going back
 // through the compass every time.
 export function renderTopNav(activeKey) {
   const nav = document.createElement("nav");

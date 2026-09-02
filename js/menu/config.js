@@ -17,14 +17,22 @@ export const BACKGROUND_IMAGE = "/menu/background.jpg";
 // Leave null to fall back to a plain placeholder space gradient (see
 // skillsView.js) until you drop a real nebula/space image in and point
 // this at it, e.g. "/menu/hdri/nebula.jpg".
-export const SKILLS_BACKGROUND_IMAGE = "/menu/images/skills-background.webp";
+// The -px file is the same panorama downsampled to 880px with a nearest
+// kernel and banded to 48 colours. The chunk has to be baked in: the skills
+// screen shows this at background-size 320%, so the original 4216px source was
+// being UPSCALED to ~6100 — which is why it read soft — and
+// image-rendering:pixelated on top of that only ever bought a 1.5x chunk.
+// Small source + pixelated upscale is what actually produces visible pixels.
+// The original is untouched at skills-background.webp — swap this line back
+// to undo.
+export const SKILLS_BACKGROUND_IMAGE = "/menu/images/skills-background-px.png";
 
 // The four compass directions. `key` must match the route used in
 // src/views + src/router.js. Position matches the reference art:
-// SKILLS on top, ITEMS on the right, MAP on the bottom, MAGIC on the left.
+// SKILLS on top, ITEMS on the right, MAP on the bottom, PORTFOLIO on the left.
 export const COMPASS_DIRECTIONS = {
   top: { key: "skills", label: "Skills" },
   right: { key: "items", label: "Items" },
   bottom: { key: "map", label: "Map" },
-  left: { key: "magic", label: "Magic" },
+  left: { key: "portfolio", label: "Portfolio" },
 };

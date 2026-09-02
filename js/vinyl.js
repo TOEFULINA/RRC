@@ -134,6 +134,41 @@ export function vinylFocusBox(mover) {
   return { centre, size: box.getSize(new THREE.Vector3()) };
 }
 
+// Step to the record `dir` slots along the crate from `mover`, wrapping round
+// at the ends so you can keep flipping in one direction forever.
+//
+// Ordered by the number in the node name (Vinyl 1, Vinyl 2, ...) rather than
+// by traverse order, which is whatever the exporter happened to write. The
+// numbering follows the crate left to right, so "next" moves the way your hand
+// would — flipping through them, not jumping around the box.
+export function vinylNeighbour(mover, dir) {
+  if (records.length < 2) return null;
+  const order = orderedRecords();
+  const i = order.findIndex((r) => r.mover === mover);
+  if (i === -1) return order[0].mover;
+  return order[(i + dir + order.length) % order.length].mover;
+}
+
+export function vinylCount() {
+  return records.length;
+}
+
+// Position in the crate, 1-based, for the "3 / 20" readout.
+export function vinylIndexOf(mover) {
+  return orderedRecords().findIndex((r) => r.mover === mover) + 1;
+}
+
+let ordered = null;
+function orderedRecords() {
+  if (ordered && ordered.length === records.length) return ordered;
+  const numberOf = (r) => {
+    const m = (r.mover.name || "").match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
+  };
+  ordered = records.slice().sort((a, b) => numberOf(a) - numberOf(b));
+  return ordered;
+}
+
 // Hit-test at a screen point. Exported so main.js can decide what a click
 // means without duplicating the raycast.
 export function pickVinyl(clientX, clientY) {
