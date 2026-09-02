@@ -22,7 +22,12 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 // Swap this for any file in menu/models/ — everything below reframes itself
 // around whatever shape turns up.
-const SPIN_MODEL = "menu/models/red-claymation-shoe.glb";
+// A loader-only cut of the Sticker Print Boots: normal maps dropped, textures
+// at 128px, geometry at 4%. The full item model is 6.8MB and 428k triangles,
+// which is absurd for something drawn into a 72x72 buffer — this is 216KB and
+// 1.3MB of GPU. Swap this line for any other file in menu/models/ and
+// everything below reframes itself around whatever turns up.
+const SPIN_MODEL = "menu/models/loader-boots.glb";
 
 const SPIN_SPEED = 0.7;      // radians/sec around Y
 const TUMBLE = 0.16;         // radians of slow nod, so it isn't a flat turntable
@@ -58,11 +63,16 @@ export function startLoaderSpin() {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-  const key = new THREE.DirectionalLight(0xfff3e2, 2.2);
+  // Rebalanced for the off-white screen. The old values were set against a
+  // near-black background, where flooding the model with ambient light still
+  // left it reading as a bright shape on dark; on a pale ground that same fill
+  // washes it out into the background. Less ambient, harder key: the model
+  // needs its own shadow side to have a silhouette here.
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const key = new THREE.DirectionalLight(0xfff6ea, 2.4);
   key.position.set(1.5, 2, 2);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x9fb6ff, 1.1);
+  const rim = new THREE.DirectionalLight(0xbcc9e8, 0.6);
   rim.position.set(-2, 0.5, -1.5);
   scene.add(rim);
 

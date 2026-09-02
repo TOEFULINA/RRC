@@ -616,6 +616,12 @@ label[for],
 
 .info-card {
   position: relative;
+  /* Type inside is sized in cqw — percentages of THE CARD's width — so the
+     whole block scales with the frame instead of with the viewport. It used to
+     be viewport-clamped on desktop and card-relative only on mobile, which is
+     why the desktop card had so much air: the type hit its rem cap long before
+     the card hit its 500px width. */
+  container-type: inline-size;
   width: min(500px, 94%);
   flex-shrink: 0;
   align-self: center;
@@ -649,15 +655,17 @@ label[for],
 .info-card-inner {
   position: relative;
   height: 100%;
-  padding: 7% 8%;
+  /* Tighter than 7%/8% — the knotwork frame already reads as a margin, so the
+     padding was double-counting it. */
+  padding: 4.5% 6.5%;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.45rem;
+  gap: 1.2cqw;
   overflow: hidden;
 }
 .info-name {
-  font-size: clamp(0.85rem, 2.1vw, 1.4rem);
+  font-size: 6.2cqw;
   font-weight: 700;
   text-align: center;
   letter-spacing: -0.02em;
@@ -671,12 +679,12 @@ label[for],
   height: 1px;
   background: var(--panel-border);
   opacity: 0.7;
-  margin: 0.25rem 0 0.4rem;
+  margin: 1.1cqw 0 1.4cqw;
 }
 .info-body {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1.6cqw;
   overflow: auto;
 }
 /* Stat row: label + value sit inline on the same baseline (not stacked),
@@ -688,7 +696,7 @@ label[for],
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.3rem clamp(1rem, 4.5vw, 2.5rem);
+  gap: 1.2cqw 9cqw;
 }
 .stat-list li {
   display: flex;
@@ -699,18 +707,18 @@ label[for],
 .stat-label {
   color: var(--ink-dim);
   text-transform: uppercase;
-  font-size: clamp(0.56rem, 2vw, 0.72rem);
+  font-size: 3.1cqw;
   letter-spacing: 0.08em;
 }
 .stat-list li span:last-child {
   font-weight: 700;
-  font-size: clamp(0.9rem, 3.2vw, 1.3rem);
+  font-size: 5.6cqw;
   color: var(--ink);
 }
 /* Description sits centered beneath the (left-aligned) stat row, same as
    the reference tooltip — no divider above it, one line across the box. */
 .item-description {
-  font-size: clamp(0.62rem, 2.1vw, 0.8rem);
+  font-size: 3.5cqw;
   line-height: 1.4;
   color: var(--ink-dim);
   font-weight: 400;
@@ -841,9 +849,19 @@ label[for],
    that piece normally, same as picking it from the list. */
 .detail-col.gallery-mode {
   justify-content: flex-start;
+  /* The scroller, now that .gallery-grid is auto-height. overflow-x hidden so
+     a wide thumbnail can never reintroduce a sideways scrollbar. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 .gallery-heading {
   flex-shrink: 0;
+  /* Stays put while the collage moves under it — it's the label for what
+     you're looking at, and the column is the scroller now. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
   font-size: clamp(1rem, 1.6vw, 1.25rem);
   letter-spacing: 0.04em;
 }
@@ -858,10 +876,16 @@ label[for],
    render, a square icon) instead of every tile being cropped to a
    uniform square. Columns lay out top-to-bottom then wrap, which is what
    gives it the scattered collage feel rather than a strict row grid. */
+/* The multi-column box itself must be height:auto and NOT the scroller.
+   A multicol container with a definite height fragments in the INLINE
+   direction by spec — it keeps making new columns off to the right and you
+   scroll sideways, which is exactly what it was doing. Let it grow as tall as
+   it likes into a fixed number of columns, and hand the scrolling to the
+   parent, and the same collage flows downward instead. */
 .gallery-grid {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
   columns: 160px 4;
   column-gap: 0.4rem;
   padding-right: 0.25rem;
@@ -975,10 +999,21 @@ label[for],
   .item-viewer {
     /* Must still GROW (flex:1), just capped. With flex:0 it fell back to its
        160px min-height and the model shrank to a thumbnail with a screen of
-       dead space underneath. The cap is what creates the slack below the card
-       instead of between the model and the card. */
+       dead space underneath. */
     flex: 1 1 auto;
-    max-height: 74%;
+    max-height: 58%;
+    /* Drops the model down so its centre sits beside the selector arrow
+       between the two columns, instead of floating up near the top nav. The
+       arrow is centred in the list column, i.e. about half way down the
+       screen, and the viewer's own centre is what has to meet it — hence an
+       offset roughly equal to half the slack, not a nudge. */
+    margin-top: 16vh;
+  }
+  /* The card follows the model immediately — no margin-top:auto pushing it to
+     the bottom of the column. It's a caption for the thing above it, so the
+     slack belongs underneath the pair, not between them. */
+  .info-card {
+    margin-top: 0;
   }
   .info-card {
     container-type: inline-size;
@@ -993,11 +1028,8 @@ label[for],
     padding: 7% 8%;
     gap: 1.44cqw;      /* 0.45rem at 500px */
   }
-  .info-name        { font-size: 4.48cqw; }  /* 1.4rem  */
-  .stat-label       { font-size: 2.30cqw; }  /* 0.72rem */
-  .stat-list li span:last-child { font-size: 4.16cqw; }  /* 1.3rem */
-  .item-description { font-size: 2.56cqw; }  /* 0.8rem  */
-  .stat-list        { gap: 0.96cqw 8cqw; }   /* 0.3rem / 2.5rem */
+  /* Sizes now live on the base rules in cqw and apply at every width — see
+     .info-card above. Nothing to override here. */
 }
 
 /* ---------- skills: constellation carousel ---------- */
@@ -1407,6 +1439,11 @@ label[for],
 }
 .items-fullscreen.mirrored .detail-col.gallery-mode {
   justify-content: flex-start;
+  /* The scroller, now that .gallery-grid is auto-height. overflow-x hidden so
+     a wide thumbnail can never reintroduce a sideways scrollbar. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 /* Back out of a single piece to the collage it came from. Sits above the
    media, left-aligned with it. */

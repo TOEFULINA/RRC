@@ -9,14 +9,14 @@
 // stats:     any label/value pairs you want — mirrors a Skyrim item
 //            tooltip (Armor / Weight / Value). Use whatever fits the
 //            piece: Materials, Year, Edition, Runtime, etc.
-// viewerFitMargin: optional — how tightly the 3D viewer frames this one
-//            model (lower = bigger/tighter fill). Leave unset for a safe
-//            default that never clips regardless of the mesh's shape; only
-//            add this for a specific item once you've checked it doesn't
-//            clip its own model on rotation (compact/round meshes can
-//            usually go well below 1, elongated ones — a long box, a
-//            slide — need to stay close to 1 or they'll swing a corner
-//            out of frame). See src/three/modelViewer.js for the math.
+// viewerFitMargin: optional — extra breathing room around this one model
+//            (1 = touching the frame edge at the start angle, higher = more
+//            air). Leave it unset: the viewer now fits the model's real
+//            bounding-box corners at its starting angle, so it is already as
+//            large as it can be without clipping. Every item used to carry a
+//            hand-tuned value under 1 here, which was compensating for the
+//            old bounding-sphere fit framing for a diagonal you never see;
+//            those are gone. See js/menu/three/modelViewer.js for the math.
 // viewerStartOpposite: optional — starts the camera on the far side of
 //            the model instead of the shared default corner. Per item,
 //            same as viewerFitMargin above.
@@ -258,7 +258,6 @@ export const items = [
   {
     ...placeholder("item-11", "Button Covered Bag", "Accessories"),
     model: "/menu/models/pins-bag.glb",
-    viewerFitMargin: 0.8,
     viewerStartAngle: { thetaDeg: 180, phiDeg: 60 },
     stats: [
       { label: "Year", value: "2026" },
@@ -299,7 +298,6 @@ export const items = [
   {
     ...placeholder("item-14", "Steak Ring", "Accessories"),
     model: "/menu/models/steak-ring.glb",
-    viewerFitMargin: 0.85,
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "MARKET" },
@@ -310,7 +308,6 @@ export const items = [
   {
     ...placeholder("item-52", "Spaghetti Ring", "Accessories"),
     model: "/menu/models/spaghetti-ring.glb",
-    viewerFitMargin: 0.85,
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "GIFT" },
@@ -321,7 +318,6 @@ export const items = [
   {
     ...placeholder("item-43", "Steakpods Case", "Accessories"),
     model: "/menu/models/steakpods.glb",
-    viewerFitMargin: 0.8,
     viewerStartAngle: { thetaDeg: 180, phiDeg: 90 },
     stats: [
       { label: "Year", value: "2025" },
@@ -336,8 +332,6 @@ export const items = [
     ...placeholder("item-15", "Red Claymation Shoe", "Footwear"),
     model: "/menu/models/red-claymation-shoe.glb",
     // Compact/rounded mesh — safe to fill the frame much more tightly
-    // than the safe-for-anything default without clipping on rotation.
-    viewerFitMargin: 0.5,
     viewerStartAngle: { thetaDeg: 267.5, phiDeg: 84.4 },
     stats: [
       { label: "Year", value: "2025" },
@@ -350,8 +344,6 @@ export const items = [
     ...placeholder("item-16", "Black Claymation Shoe", "Footwear"),
     model: "/menu/models/black-claymation-shoe.glb",
     // Same mesh as Red Claymation Shoe (item-15), just a different UV/texture
-    // — safe to reuse its exact framing and starting angle.
-    viewerFitMargin: 0.5,
     viewerStartAngle: { thetaDeg: 267.5, phiDeg: 84.4 },
     stats: [
       { label: "Year", value: "2026" },
@@ -363,7 +355,6 @@ export const items = [
   {
     ...placeholder("item-17", "Glo Gang Slides", "Footwear"),
     model: "/menu/models/glogang-clog.glb",
-    viewerFitMargin: 0.7,
     viewerStartAngle: { thetaDeg: 210.0, phiDeg: 72.6 },
     stats: [
       { label: "Year", value: "2025" },
@@ -375,7 +366,6 @@ export const items = [
   {
     ...placeholder("item-18", "Steak Slides", "Footwear"),
     model: "/menu/models/beef-clog.glb",
-    viewerFitMargin: 0.7,
     viewerStartAngle: { thetaDeg: 12.6, phiDeg: 75.2 },
     stats: [
       { label: "Year", value: "2025" },
@@ -387,7 +377,6 @@ export const items = [
   {
     ...placeholder("item-19", "Sticker Print Boots", "Footwear"),
     model: "/menu/models/sticker-docs.glb",
-    viewerFitMargin: 0.7,
     viewerStartAngle: { thetaDeg: 250.8, phiDeg: 79.4 },
     stats: [
       { label: "Year", value: "2018" },
@@ -398,7 +387,6 @@ export const items = [
   {
     ...placeholder("item-42", "Brazil Runner", "Footwear"),
     model: "/menu/models/brazil-runner.glb",
-    viewerFitMargin: 0.7,
     viewerStartAngle: { thetaDeg: 8.0, phiDeg: 79.5 },
     stats: [
       { label: "Year", value: "2026" },
@@ -410,7 +398,6 @@ export const items = [
   {
     ...placeholder("item-50", "Claymation Slide", "Footwear"),
     model: "/menu/models/clay-slide.glb",
-    viewerFitMargin: 0.7,
     viewerStartAngle: { thetaDeg: 261.3, phiDeg: 75.7 },
     stats: [
       { label: "Year", value: "2026" },
@@ -424,7 +411,6 @@ export const items = [
   {
     ...placeholder("item-20", "Foot Clog Box", "Packaging"),
     model: "/menu/models/hulk-packaging.glb",
-    viewerFitMargin: 0.85,
     viewerStartAngle: { thetaDeg: 173.9, phiDeg: 89.5 },
     // Source animation is baked at 24fps (confirmed from keyframe spacing)
     // — only play the box-opening portion, not the whole clip. The clip's
@@ -461,7 +447,6 @@ export const items = [
   {
     ...placeholder("item-23", "Spike Sandal Box", "Packaging"),
     model: "/menu/models/spike-sandal-box.glb",
-    viewerFitMargin: 0.85,
     viewerStartAngle: { thetaDeg: 219.8, phiDeg: 71.2 },
     stats: [
       { label: "Year", value: "2026" },
@@ -517,7 +502,6 @@ export const items = [
   {
     ...placeholder("item-32", "Raw Beef Set", "Nail Sets"),
     model: "/menu/models/beef-nails.glb",
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
@@ -528,7 +512,6 @@ export const items = [
   {
     ...placeholder("item-33", "Raw Pork Set", "Nail Sets"),
     model: "/menu/models/pork-nails.glb",
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
@@ -539,7 +522,6 @@ export const items = [
   {
     ...placeholder("item-34", "Halloween Animal Crossing Set", "Nail Sets"),
     model: "/menu/models/ac-halloween-nails.glb",
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
@@ -550,7 +532,6 @@ export const items = [
   {
     ...placeholder("item-35", "Splatoon Sticker Collage Set", "Nail Sets"),
     model: "/menu/models/splatoon-collage-nails.glb",
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2024" },
@@ -561,14 +542,12 @@ export const items = [
   {
     ...placeholder("item-36", "Deco Berserk Set", "Nail Sets"),
     model: "/menu/models/berserk-nails.glb",
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     description: "Custom",
   },
   {
     ...placeholder("item-38", "Deco Katamari Set", "Nail Sets"),
     model: "/menu/models/katamari-nails.glb",
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
@@ -580,8 +559,6 @@ export const items = [
     ...placeholder("item-58", "Plaid Junk Set", "Nail Sets"),
     model: "/menu/models/plaid-junk-nails.glb",
     // Same framing as the other Tripo-scanned nail sets — they're all the
-    // same subject at the same scale, so they should sit identically.
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
@@ -592,7 +569,6 @@ export const items = [
   {
     ...placeholder("item-59", "Toefu Lina Squid Set", "Nail Sets"),
     model: "/menu/models/squid-set-nails.glb",
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
@@ -603,7 +579,6 @@ export const items = [
   {
     ...placeholder("item-39", "Deco Tentacle Set", "Nail Sets"),
     model: "/menu/models/tentacle-nails.glb",
-    viewerFitMargin: 0.75,
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2026" },
@@ -616,7 +591,6 @@ export const items = [
   {
     ...placeholder("item-40", "Memento Deluxe Cassette", "Misc"),
     model: "/menu/models/memento-deluxe.glb",
-    viewerFitMargin: 0.65,
     stats: [
       { label: "Year", value: "2024" },
       { label: "Value", value: "PRICELESS" },

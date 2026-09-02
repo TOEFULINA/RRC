@@ -236,44 +236,84 @@ export function mountModelViewer(
   scene.add(rim);
 
   let subject = null;
-  let boundingSphere = null;
+  let boundingBox = null;
   // Some models carry their own baked animation (a moving ribbon, a lid
   // popping open, etc) — mixer stays null for
   // models/placeholders that don't have one, so update() below is a no-op.
   let mixer = null;
   const clock = new THREE.Clock();
 
-  // Points the camera at a distance where the subject's bounding sphere
-  // fills the frame at a set ratio, for the current camera aspect — then
-  // locks min/maxDistance there so it can never be zoomed past that
-  // point. Called once after a model loads (subject not yet rotated, so
-  // it also sets the starting angle), and again on resize (min/maxDistance
-  // change re-clamps the *existing* camera position via OrbitControls, so
-  // the user's current rotation is preserved — see onResize below).
-  function fitCameraToSphere(resetAngle) {
-    if (!boundingSphere) return;
+  // Distance at which the subject fills the frame as hard as it can WITHOUT
+  // clipping — measured at the starting angle, from the real bounding box.
+  //
+  // This used to fit the bounding SPHERE, which is orientation-independent:
+  // it guarantees nothing clips from any angle, and so it is set by the
+  // model's longest diagonal no matter which way you're looking. For a flat
+  // nail case seen face-on that meant framing for a corner-to-corner diagonal
+  // that never appears on screen, and the subject sat as a stamp in the middle
+  // of a lot of empty frame. Per-item margins under 1.0 were people fighting
+  // that, by eye, one model at a time.
+  //
+  // Instead: take the eight box corners, put them in the camera's own basis at
+  // the start orientation, and solve the smallest distance that keeps every
+  // one of them inside the frustum. Exact for perspective, and tight by
+  // construction, because it measures the silhouette you are actually looking
+  // at rather than the worst one that exists.
+  //
+  // Rotating afterwards CAN push a corner out of frame. That's deliberate —
+  // the preview is what wants to be big.
+  const _corner = new THREE.Vector3();
+  const _right = new THREE.Vector3();
+  const _up = new THREE.Vector3();
+  const _fwd = new THREE.Vector3();
+
+  function fitDistanceForDirection(dir) {
+    if (!boundingBox) return 1;
     const vFov = THREE.MathUtils.degToRad(camera.fov);
-    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
-    // 1.0 = the subject's bounding sphere exactly touches the frame edges
-    // from every rotation angle — this is the actual size-in-frame lever
-    // (the object's own scale/targetSize below cancels out of this math,
-    // since distance is derived from the bounding sphere itself). This is
-    // also the hard safety floor for any mesh, shape unknown: going below
-    // 1.0 only stays uncropped for roughly ball-shaped meshes — anything
-    // more elongated (a long packaging box, a slide) swings its corners
-    // past the sphere's own silhouette and out of frame on rotation. Callers
-    // that know their specific mesh is compact/round can pass a lower
-    // fitMargin for a tighter default fill; unset defaults to this safe floor.
-    // On a phone the viewer is a fraction of the area it gets on a desktop, so
-    // the same framing leaves the model a stamp in the middle of the screen.
-    // Tightening the margin pulls the camera in; the safety floor above still
-    // applies proportionally, so an elongated mesh doesn't start clipping.
-    const narrow = window.matchMedia("(max-width: 860px)").matches;
-    const margin = (fitMargin ?? 1.03) * (narrow ? 0.8 : 1);
-    const distance = (boundingSphere.radius / Math.sin(Math.min(vFov, hFov) / 2)) * margin;
+    const tanV = Math.tan(vFov / 2);
+    const tanH = tanV * camera.aspect;
+
+    // Camera basis. _fwd points from the camera toward the subject, so a
+    // corner's depth along it is positive when it sits further away.
+    _fwd.copy(dir).normalize().multiplyScalar(-1);
+    const worldUp = Math.abs(_fwd.y) > 0.999 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+    _right.crossVectors(_fwd, worldUp).normalize();
+    _up.crossVectors(_right, _fwd).normalize();
+
+    const min = boundingBox.min, max = boundingBox.max;
+    let need = 0;
+    for (let i = 0; i < 8; i++) {
+      _corner.set(i & 1 ? max.x : min.x, i & 2 ? max.y : min.y, i & 4 ? max.z : min.z);
+      const x = Math.abs(_corner.dot(_right));
+      const y = Math.abs(_corner.dot(_up));
+      const d = _corner.dot(_fwd);
+      // A corner at depth d is inside when |x| <= (D + d) * tanH, so the
+      // distance this one corner demands is |x|/tanH - d. The frame has to
+      // satisfy the most demanding corner on both axes.
+      need = Math.max(need, x / tanH - d, y / tanV - d);
+    }
+    return need;
+  }
+
+  // Locks min/maxDistance at the fitted distance so it can never be zoomed
+  // past. Called once after a model loads (which also sets the starting
+  // angle), and again on resize — min/maxDistance re-clamp the *existing*
+  // camera position through OrbitControls, so the user's rotation survives.
+  function fitCameraToSphere(resetAngle) {
+    if (!boundingBox) return;
+    // A hair of air so antialiasing at the very edge doesn't read as a cut.
+    // Per-item viewerFitMargin still multiplies this for anything that wants
+    // to breathe more (or less) than the default.
+    const margin = fitMargin ?? 1.04;
+    // Fit for wherever the camera is now, so a resize mid-rotation reframes
+    // for what's actually on screen rather than snapping back to the start.
+    const dir = resetAngle
+      ? defaultViewDir
+      : camera.position.clone().normalize();
+    const distance = fitDistanceForDirection(dir) * margin;
 
     if (resetAngle) {
-      camera.position.copy(defaultViewDir).multiplyScalar(distance);
+      camera.position.copy(defaultViewDir).normalize().multiplyScalar(distance);
     }
     camera.near = Math.max(distance / 100, 0.01);
     camera.far = distance * 100;
@@ -289,7 +329,7 @@ export function mountModelViewer(
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
     // Just normalizes different models' wildly different export scales to
     // one working size — how much of the frame the subject actually fills
-    // is controlled by `margin` in fitCameraToSphere above, not this value.
+    // is set by the corner fit above, not this value.
     const targetSize = 2.4;
     const scale = targetSize / maxDim;
     object.scale.setScalar(scale);
@@ -298,10 +338,9 @@ export function mountModelViewer(
     const newCenter = newBox.getCenter(new THREE.Vector3());
     object.position.sub(newCenter);
 
-    const finalBox = new THREE.Box3().setFromObject(object);
-    const sphere = new THREE.Sphere();
-    finalBox.getBoundingSphere(sphere);
-    boundingSphere = sphere;
+    // Kept as a box, not reduced to a sphere — the corners are the whole
+    // point of the fit above.
+    boundingBox = new THREE.Box3().setFromObject(object);
 
     controls.target.set(0, 0, 0);
     fitCameraToSphere(true);
