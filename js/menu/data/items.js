@@ -278,6 +278,15 @@ export const items = [
     description: "Engraved using the xtool engraving pen - custom illustration",
   },
   {
+    ...placeholder("item-47", "Deco Self Portrait Case", "Accessories"),
+    model: "/menu/models/self-portrait-case.glb",
+    stats: [
+      { label: "Year", value: "2024" },
+      { label: "Value", value: "\u2014" },
+      { label: "Weight", value: "\u2014" },
+    ],
+  },
+  {
     ...placeholder("item-13", "Deco Majora's Mask Case", "Accessories"),
     model: "/menu/models/majoras-mask-case.glb",
     stats: [
@@ -508,6 +517,7 @@ export const items = [
   {
     ...placeholder("item-32", "Raw Beef Set", "Nail Sets"),
     model: "/menu/models/beef-nails.glb",
+    viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },
@@ -517,6 +527,7 @@ export const items = [
   {
     ...placeholder("item-33", "Raw Pork Set", "Nail Sets"),
     model: "/menu/models/pork-nails.glb",
+    viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },
