@@ -289,13 +289,60 @@ label[for],
   transform: translate(calc(100% + var(--gap)), -50%);
 }
 
+/* Three shortcuts under the compass. All three sit in the same square frame
+   so they read as one set rather than three borrowed logos at three different
+   weights — the Nova one is a letter in a box, so the other two match it.
+   Drawn as inline SVG in currentColor: nothing to download, and the menu's
+   invert filter can flip them the same way it flips the type. */
+.social-row {
+  position: absolute;
+  bottom: calc(5vh + 2.2rem);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.9rem;
+  z-index: 2;
+}
+.social-link {
+  display: block;
+  width: 22px;
+  height: 22px;
+  opacity: 0.55;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.social-link:hover,
+.social-link:focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.social-link svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+/* The Instagram lens dot is solid, not an outline. */
+.social-link svg .fill {
+  fill: currentColor;
+  stroke: none;
+}
+
 .hint {
   position: absolute;
   bottom: 5vh;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
+  /* One line, always. It was wrapping to two on anything narrow, which reads
+     as a paragraph under the compass instead of a caption. Tracking tightens
+     and the type steps down with the viewport rather than breaking. */
+  white-space: nowrap;
+  max-width: 96vw;
+  font-size: clamp(0.6rem, 2.1vw, 0.8rem);
+  letter-spacing: clamp(0.04em, 0.5vw, 0.12em);
   color: var(--ink-dim);
   opacity: 0.6;
 }

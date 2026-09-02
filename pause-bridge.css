@@ -181,6 +181,25 @@ body.paused #pause-open-btn {
   text-shadow: 0 0 16px rgba(0, 0, 0, 0.8);
 }
 
+/* The "Use Arrow Keys or Click a Direction" line under the compass — same
+   inversion trick as the labels above, and it comes off var(--ink-dim) at 0.6
+   opacity, which was tuned for a dark backdrop and reads as barely-there brown
+   over the live camera view. */
+#pause-menu-root #app .hint {
+  color: #ffffff;
+  opacity: 0.85;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+#pause-menu-root.menu-inverted #app .hint {
+  color: #000000;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
+}
+
+/* Same inversion trick for the shortcut glyphs — they're drawn in
+   currentColor, so setting the link's colour is enough. */
+#pause-menu-root #app .social-link { color: #ffffff; }
+#pause-menu-root.menu-inverted #app .social-link { color: #000000; }
+
 /* ---- pause backdrop: blur, don't dim -------------------------------------
    menu.css gives #bg-overlay a radial black wash running to 0.65 at the
    edges. That was tuned for the original static backdrop image; against a
