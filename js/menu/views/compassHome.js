@@ -36,27 +36,6 @@ export function renderCompassHome(container) {
         ${COMPASS_DIRECTIONS.left.label}
       </button>
     </div>
-    <div class="social-row">
-      <a class="social-link" href="https://www.instagram.com/toefulina" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" />
-          <circle cx="12" cy="12" r="4.2" />
-          <circle cx="17.2" cy="6.8" r="1.15" class="fill" />
-        </svg>
-      </a>
-      <a class="social-link" href="https://x.com/luvsichexalogy" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3.5" y="3.5" width="17" height="17" rx="2" />
-          <path d="M8 8 L16 16 M16 8 L8 16" />
-        </svg>
-      </a>
-      <a class="social-link" href="https://www.itsnova.com/toefu?tab=work" target="_blank" rel="noopener noreferrer" aria-label="Nova">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3.5" y="3.5" width="17" height="17" rx="2" />
-          <path d="M8.6 16.2 V7.8 L15.4 16.2 V7.8" />
-        </svg>
-      </a>
-    </div>
     <div class="hint">Use Arrow Keys or Click a Direction</div>
     ${cameFromToefulina() ? `<button class="back-link">Back</button>` : ""}
   `;

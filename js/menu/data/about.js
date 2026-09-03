@@ -30,6 +30,7 @@ export const about = {
     { icon: "instagram", label: "Instagram", href: "https://instagram.com/toefulina" },
     { icon: "twitter", label: "Twitter", href: "https://twitter.com/LUVsicHEXALOGY" },
     { icon: "linkedin", label: "LinkedIn", href: "https://www.linkedin.com/in/miuppa/" },
+    { icon: "nova", label: "Nova", href: "https://www.itsnova.com/toefu?tab=work" },
     { icon: "mail", label: "miuppa13@gmail.com", href: "mailto:miuppa13@gmail.com" },
   ],
 

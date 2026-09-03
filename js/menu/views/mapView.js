@@ -30,6 +30,9 @@ const ICONS = {
   twitter: `<path d="M23 4.9c-.8.4-1.7.6-2.6.8a4.5 4.5 0 0 0 2-2.5c-.9.5-1.9.9-2.9 1.1A4.5 4.5 0 0 0 11.9 8c0 .3 0 .7.1 1A12.7 12.7 0 0 1 2.7 3.9a4.5 4.5 0 0 0 1.4 6 4.4 4.4 0 0 1-2-.6v.1a4.5 4.5 0 0 0 3.6 4.4 4.5 4.5 0 0 1-2 .1 4.5 4.5 0 0 0 4.2 3.1A9 9 0 0 1 1 19.5 12.7 12.7 0 0 0 7.9 21.5c8.3 0 12.8-6.9 12.8-12.8v-.6c.9-.6 1.6-1.4 2.3-2.2z" fill="currentColor" stroke="none" />`,
   linkedin: `<rect x="2" y="2" width="20" height="20" rx="4" /><circle cx="7.5" cy="8" r="1.4" fill="currentColor" stroke="none" /><rect x="6.3" y="10.5" width="2.4" height="7.5" fill="currentColor" stroke="none" /><path d="M11.5 10.5h2.3v1.1c.4-.7 1.3-1.3 2.6-1.3 2.1 0 3 1.3 3 3.7v4h-2.4v-3.6c0-1-.4-1.7-1.3-1.7-.9 0-1.4.6-1.4 1.7v3.6h-2.4v-7.5z" fill="currentColor" stroke="none" />`,
   mail: `<rect x="2.5" y="4.5" width="19" height="15" rx="1.5" /><path d="M3 6l9 6.5L21 6" />`,
+  // The letter-in-a-box mark the compass row used, kept as-is so the link
+  // still reads the same way it did there.
+  nova: `<rect x="3.5" y="3.5" width="17" height="17" rx="2" /><path d="M8.6 16.2 V7.8 L15.4 16.2 V7.8" />`,
 };
 
 function icon(name) {

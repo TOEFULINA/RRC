@@ -248,8 +248,6 @@ body.paused #pause-open-btn {
 
 /* Same inversion trick for the shortcut glyphs — they're drawn in
    currentColor, so setting the link's colour is enough. */
-#pause-menu-root #app .social-link { color: #ffffff; }
-#pause-menu-root.menu-inverted #app .social-link { color: #000000; }
 
 /* ---- pause backdrop: blur, don't dim -------------------------------------
    menu.css gives #bg-overlay a radial black wash running to 0.65 at the
