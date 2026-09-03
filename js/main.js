@@ -38,6 +38,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
+import { requestItem } from "./menu/views/itemsView.js";
 import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-03web3";
 import { initRainAudio, toggleRainAudio } from "./rainAudio.js?v=2026-09-01d1";
 import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox,
@@ -1180,6 +1181,13 @@ Promise.all([modelBytes, bootAnimationDone()])
     const stations = initStations(model, camera, canvas, {
       tween: startCamTween, freeze: freezeToStill, thaw: thawFromStill,
       clip: setClipHeight,
+      // The preview's way through to the real menu, landing on the piece you
+      // were just looking at rather than the top of the list.
+      openItems: (itemId) => {
+        requestItem(itemId);
+        navigate("items");
+        setPauseMenuOpen(true);
+      },
     });
     console.info(`stations: ${stations.join(", ") || "none"}.`);
     if (COLLISION_ENABLED) {

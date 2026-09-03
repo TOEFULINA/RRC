@@ -414,3 +414,90 @@
   .ipod-dock { transition: none; }
   .station-root { transition: none; }
 }
+
+/* ---------------------------------------------------------------- pickups
+   Tapping an object in the room that is also a piece in the Items menu opens
+   its 3D preview here, over the frozen frame. Same still, same escape, but no
+   camera move — you come back to exactly where you were standing. */
+.pickup-root {
+  position: fixed;
+  inset: 0;
+  z-index: 42;                 /* over the station panels, under the menu */
+  opacity: 0;
+  transition: opacity 0.26s ease;
+}
+.pickup-root.is-open { opacity: 1; }
+.pickup-root[hidden] { display: none !important; }
+
+.pickup-scrim {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  padding: max(3vh, env(safe-area-inset-top, 0px)) 4vw
+           max(3vh, env(safe-area-inset-bottom, 0px));
+  /* Only a light wash: the room behind is the point, same as the stations. */
+  background: linear-gradient(rgba(10, 8, 14, 0.1), rgba(10, 8, 14, 0.42));
+}
+
+.pickup-viewer {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-height: 0;
+  /* The viewer sizes its renderer off this box, so it needs real dimensions
+     before mountModelViewer runs — grid gives it those. */
+}
+.pickup-viewer canvas { display: block; }
+
+.pickup-card {
+  position: relative;
+  z-index: 2;
+  justify-self: center;
+  width: min(92vw, 30rem);
+  padding: 0.8rem 1rem 0.9rem;
+  text-align: center;
+  border: 1px solid rgba(238, 231, 214, 0.28);
+  border-radius: 0.4rem;
+  background: rgba(14, 12, 18, 0.72);
+  color: #eee7d6;
+}
+.pickup-name {
+  font: 1.05rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pickup-stats {
+  display: flex;
+  justify-content: center;
+  gap: 1.1rem;
+  margin-top: 0.35rem;
+  color: rgba(238, 231, 214, 0.72);
+  font: 0.72rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+}
+.pickup-stats i {
+  font-style: normal;
+  color: rgba(238, 231, 214, 0.42);
+  margin-right: 0.3em;
+}
+.pickup-to-items {
+  margin-top: 0.7rem;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid rgba(238, 231, 214, 0.4);
+  border-radius: 999px;
+  background: none;
+  color: #eee7d6;
+  font: 0.72rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.pickup-to-items:hover {
+  background: rgba(238, 231, 214, 0.14);
+  border-color: rgba(238, 231, 214, 0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pickup-root { transition: none; }
+}

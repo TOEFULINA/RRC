@@ -63,6 +63,31 @@ const SHOW_ANGLE_READOUT = /^(localhost|127\.0\.0\.1|\[::1\]|.*\.local)$/i
 // keyframe times in the .glb (a uniform delta of 1/24s = 24fps, 1/30s =
 // 30fps, etc) — don't guess, since trimming with the wrong fps plays the
 // wrong slice.
+// Nearest-neighbour every map on a model, so it matches the room's own
+// pixel-textured look instead of arriving smooth. Mipmaps stay on — without
+// them a texture minified into the distance shimmers, which is worse than
+// smoothing.
+function crunchTextures(root) {
+  const seen = new Set();
+  const SLOTS = ["map", "emissiveMap", "aoMap", "roughnessMap", "metalnessMap",
+                 "normalMap", "alphaMap", "specularMap"];
+  root.traverse((obj) => {
+    if (!obj.isMesh) return;
+    for (const mat of Array.isArray(obj.material) ? obj.material : [obj.material]) {
+      if (!mat) continue;
+      for (const slot of SLOTS) {
+        const t = mat[slot];
+        if (!t || seen.has(t.uuid)) continue;
+        seen.add(t.uuid);
+        t.magFilter = THREE.NearestFilter;
+        t.minFilter = THREE.NearestMipmapNearestFilter;
+        t.anisotropy = 1;
+        t.needsUpdate = true;
+      }
+    }
+  });
+}
+
 export function mountModelViewer(
   container,
   modelPath,
@@ -70,7 +95,8 @@ export function mountModelViewer(
   startOpposite,
   startAngle,
   animationRange,
-  onExpandChange
+  onExpandChange,
+  opts = {}
 ) {
   const width = container.clientWidth || 400;
   const height = container.clientHeight || 340;
@@ -94,8 +120,13 @@ export function mountModelViewer(
   }
   camera.position.copy(defaultViewDir);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // `pixelated` is for the room's own preview: the walkaround renders below
+  // native with antialiasing off, and a crisp viewer floating over a frozen
+  // frame of it looks like a different piece of software. Matching it means
+  // no AA, a low pixel ratio, and nearest-neighbour on every map.
+  const px = !!opts.pixelated;
+  const renderer = new THREE.WebGLRenderer({ antialias: !px, alpha: true });
+  renderer.setPixelRatio(px ? 0.85 : Math.min(window.devicePixelRatio, 2));
   renderer.setSize(width, height);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -425,6 +456,7 @@ export function mountModelViewer(
         // on load — spin it 180° so the lit front is what greets you.
         subject.rotation.y = Math.PI;
         upgradeGlassMaterials(subject);
+        if (px) crunchTextures(subject);
         scene.add(subject);
 
         if (gltf.animations && gltf.animations.length) {

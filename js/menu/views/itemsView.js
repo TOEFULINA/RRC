@@ -60,6 +60,15 @@ function itemsInCategory(cat) {
   return [...list].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// Set by the room: tapping an object out there opens its 3D preview, and the
+// preview has a button through to the real Items menu. That button has to land
+// on the piece you were looking at, not at the top of the list, so the id is
+// parked here and picked up the next time this view mounts.
+let pendingItemId = null;
+export function requestItem(id) {
+  pendingItemId = id;
+}
+
 export function renderItemsView(container) {
   const categories = getCategories();
 
@@ -113,6 +122,16 @@ export function renderItemsView(container) {
 
   let categoryIndex = 0;
   let itemIndex = 0;
+  if (pendingItemId) {
+    const want = items.find((i) => i.id === pendingItemId);
+    pendingItemId = null;
+    if (want) {
+      const cat = categories.indexOf(want.category);
+      if (cat > -1) categoryIndex = cat;
+      const idx = itemsInCategory(categories[categoryIndex]).findIndex((i) => i.id === want.id);
+      if (idx > -1) itemIndex = idx;
+    }
+  }
   let focusPane = "categories"; // "categories" | "list"
   let currentList = itemsInCategory(categories[categoryIndex]);
   let disposeViewer = null;

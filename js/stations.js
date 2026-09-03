@@ -16,10 +16,28 @@
 // ---------------------------------------------------------------------------
 
 import * as THREE from "three";
+import { items } from "./menu/data/items.js";
+import { mountModelViewer } from "./menu/three/modelViewer.js?v=2026-09-03px";
 
 // Which meshes are clickable, and what opens when they are. The desk is
 // several meshes (the top, the boot on it, the drawers), so the pattern
 // deliberately matches all of them and they collapse into one station.
+// ---------------------------------------------------------------- pickups
+// Things in the room that are ALSO pieces in the Items menu. Tapping one
+// freezes the room where you stand and opens the same 3D viewer the menu
+// uses, over the frozen frame. Tapping out puts you back exactly where you
+// were — the camera never moved, so there is nothing to restore.
+//
+// Matching is by mesh name except for the belt, which has no node of its own:
+// in room.glb it is a primitive on a multi-material mesh confusingly called
+// LADYBUG_LAMP_6, and the only thing identifying it is the BELT material.
+const PICKUPS = [
+  { itemId: "item-11", mesh: /^PIN_BAG/i },                       // Button Covered Bag
+  { itemId: "item-19", mesh: /^STICKER[_ ]BOOT[_ ]DESK/i },       // Sticker Print Boots
+  { itemId: "item-22", mesh: /^CLAY[_ ]SHOE[_ ]BOX/i },           // Claymation Shoe Box
+  { itemId: "item-10", material: /^BELT$/i },                     // Charm Belt
+];
+
 const STATIONS = [
   { id: "speaker", pattern: /^speaker/i, label: "play something" },
   {
@@ -28,7 +46,9 @@ const STATIONS = [
     // they can be matched by name. The DESK ITSELF is not — it was modelled as
     // part of the loft bed, so BEDRAME is one mesh covering the bed, the
     // ladder and the desk together.
-    pattern: /^sticker[ _]boot[ _]desk|^posca/i,
+    // The boots that used to trigger this are a pickup now, so the desk is
+    // opened by the markers or by the desktop surface itself.
+    pattern: /^posca/i,
     // Hence the zone: hits on BEDRAME only count as the desk if they land
     // inside this box, which is the desk surface and the air just above it.
     // Click the bed or the ladder and nothing happens, as it should.
@@ -70,8 +90,10 @@ let onTween = null;        // (pose, done) => void   — main.js's startCamTween
 let onFreeze = null;       // (dataUrl) => void      — stop the loop, show still
 let onThaw = null;         // ()       => void       — resume the loop
 let onClip = null;         // (y|null) => void       — cut away above y
+let onOpenItems = null;    // (itemId)  => void      — hand off to the menu
 
 const found = new Map();   // id -> { meshes: [], box: Box3 }
+const pickupMeshes = [];   // { mesh, itemId }
 const ray = new THREE.Raycaster();
 const ptr = new THREE.Vector2();
 
@@ -86,11 +108,20 @@ export function initStations(model, cam, canvas, hooks) {
   onFreeze = hooks.freeze;
   onThaw = hooks.thaw;
   onClip = hooks.clip;
+  onOpenItems = hooks.openItems;
 
   found.clear();
+  pickupMeshes.length = 0;
   model.traverse((obj) => {
     if (!obj.isMesh) return;
     const name = obj.name || "";
+    const matNames = (Array.isArray(obj.material) ? obj.material : [obj.material])
+      .map((m) => m?.name || "");
+    for (const p of PICKUPS) {
+      const byName = p.mesh && p.mesh.test(name);
+      const byMat = p.material && matNames.some((n) => p.material.test(n));
+      if (byName || byMat) pickupMeshes.push({ mesh: obj, itemId: p.itemId });
+    }
     for (const st of STATIONS) {
       const direct = st.pattern.test(name);
       const zoned = st.zonePattern?.test(name);
@@ -111,10 +142,94 @@ export function initStations(model, cam, canvas, hooks) {
   });
 
   buildPanels();
-  return [...found.keys()];
+  return [...found.keys(), `${pickupMeshes.length} pickup mesh(es)`];
 }
 
-export function isStationOpen() { return openId !== null || opening; }
+export function isStationOpen() { return openId !== null || opening || itemOpen; }
+
+// ---------------------------------------------------------------- the item
+// preview. One viewer at a time, mounted on open and disposed on close, so
+// nothing lingers: the room's own context is idle behind it and this is the
+// only other one alive.
+let itemOpen = false;
+let itemRoot = null;
+let itemViewerBox = null;
+let itemDispose = null;
+let itemCurrent = null;
+
+function buildItemOverlay() {
+  if (itemRoot) return;
+  itemRoot = el("div", "pickup-root", document.body);
+  itemRoot.hidden = true;
+  el("img", "station-still", itemRoot);
+  const scrim = el("div", "pickup-scrim", itemRoot);
+  // Tapping the backdrop is the way out, so it must not catch drags on the
+  // model — the viewer's own canvas sits above it and swallows those.
+  scrim.addEventListener("pointerdown", (e) => {
+    if (e.target === scrim) closeStation();
+  });
+  itemViewerBox = el("div", "pickup-viewer", scrim);
+  const card = el("div", "pickup-card", scrim);
+  el("div", "pickup-name", card);
+  el("div", "pickup-stats", card);
+  const toItems = el("button", "pickup-to-items", card);
+  toItems.type = "button";
+  toItems.textContent = "see it in items";
+  toItems.addEventListener("click", () => {
+    const id = itemCurrent?.id;
+    closeStation();
+    if (id) onOpenItems?.(id);
+  });
+  const close = el("button", "station-close", itemRoot);
+  close.type = "button";
+  close.setAttribute("aria-label", "close");
+  close.textContent = "\u00d7";
+  close.addEventListener("click", closeStation);
+}
+
+function openItemPreview(itemId) {
+  if (openId || opening || itemOpen) return false;
+  const item = items.find((i) => i.id === itemId);
+  if (!item || !item.model) {
+    console.warn("pickup: no model for", itemId);
+    return false;
+  }
+  buildItemOverlay();
+  itemCurrent = item;
+  onFreeze();
+  itemOpen = true;
+  itemRoot.hidden = false;
+  requestAnimationFrame(() => itemRoot.classList.add("is-open"));
+
+  itemRoot.querySelector(".pickup-name").textContent = item.name;
+  itemRoot.querySelector(".pickup-stats").innerHTML = (item.stats || [])
+    .map((s2) => `<span><i>${s2.label}</i> ${s2.value}</span>`)
+    .join("");
+
+  itemDispose = mountModelViewer(
+    itemViewerBox,
+    item.model,
+    item.viewerFitMargin,
+    item.viewerStartOpposite,
+    item.viewerStartAngle,
+    item.viewerAnimationRange,
+    null,
+    { pixelated: true }        // match the room, not the menu
+  );
+  return true;
+}
+
+function closeItemPreview() {
+  if (!itemOpen) return false;
+  itemRoot.classList.remove("is-open");
+  try { itemDispose?.(); } catch (err) { console.error("pickup: dispose —", err); }
+  itemDispose = null;
+  itemCurrent = null;
+  itemOpen = false;
+  onThaw();
+  setTimeout(() => { if (!itemOpen && itemRoot) itemRoot.hidden = true; }, 320);
+  return true;
+}
 
 // Which station, if any, is under the pointer.
 export function pickStation(clientX, clientY) {
@@ -135,6 +250,12 @@ export function pickStation(clientX, clientY) {
       if (!entry.zone.containsPoint(hit.point)) continue;
       take(id, hit);
       break;
+    }
+  }
+  for (const { mesh, itemId } of pickupMeshes) {
+    const hit = ray.intersectObject(mesh, false)[0];
+    if (hit && (!best || hit.distance < best.distance)) {
+      best = { id: `item:${itemId}`, distance: hit.distance };
     }
   }
   return best?.id ?? null;
@@ -186,6 +307,7 @@ function poseFor(id, bounds) {
 }
 
 export function openStation(id, bounds, current) {
+  if (id.startsWith("item:")) return openItemPreview(id.slice(5));
   if (openId || opening || !found.has(id)) return false;
   opening = true;
   restorePose = current;
@@ -205,6 +327,7 @@ export function openStation(id, bounds, current) {
 }
 
 export function closeStation() {
+  if (closeItemPreview()) return true;
   if (!openId) return false;
   const id = openId;
   hidePanel(id);
@@ -273,8 +396,10 @@ function hidePanel(id) {
 }
 
 export function setStill(dataUrl) {
-  const img = root?.querySelector(".station-still");
-  if (img) img.src = dataUrl;
+  for (const host of [root, itemRoot]) {
+    const img = host?.querySelector(".station-still");
+    if (img) img.src = dataUrl;
+  }
 }
 
 // ---- speaker: the player -------------------------------------------------
