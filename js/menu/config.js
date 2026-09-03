@@ -3,7 +3,7 @@
 // touching any of the view logic.
 // ---------------------------------------------------------------------------
 
-export const SITE_NAME = "YOUR NAME";
+export const SITE_NAME = "TOEFULINA";
 
 // Path to the single background image shown behind every screen.
 // Drop your file in /public/background.jpg (or change this path).
@@ -33,6 +33,9 @@ export const SKILLS_BACKGROUND_IMAGE = "/menu/images/skills-background-px.png";
 export const COMPASS_DIRECTIONS = {
   top: { key: "skills", label: "Skills" },
   right: { key: "items", label: "Items" },
-  bottom: { key: "map", label: "Map" },
+  // Route key stays "map" — it is wired through the router, the top nav and
+  // main.js's arrow handling. Only the label changed, because the screen is an
+  // About page now, not a map.
+  bottom: { key: "map", label: "About" },
   left: { key: "portfolio", label: "Portfolio" },
 };

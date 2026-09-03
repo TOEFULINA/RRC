@@ -43,48 +43,130 @@ function hashString(str) {
   return h;
 }
 
-// Draws a small irregular cluster of connected "stars" — a placeholder
-// stand-in for real hand-drawn constellation art (see the file-level
-// comment above). Point count/spread vary per skill (seeded, so stable)
-// so the five placeholders don't all look identical.
+// Pixel-art constellations. Every mark is laid out on a 64x64 integer grid
+// and painted as squares — no circles, no anti-aliased diagonals — because a
+// smooth vector line is the one thing that breaks the nearest-neighbour look
+// you just walked in from. The connecting lines are rasterised with Bresenham
+// and then run-length merged, so a whole constellation's lines are ONE <path>
+// node rather than a few hundred rects.
+const GRID = 64;
+
+function bresenham(x0, y0, x1, y1) {
+  const cells = [];
+  const dx = Math.abs(x1 - x0);
+  const dy = -Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+  for (;;) {
+    cells.push([x0, y0]);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+  return cells;
+}
+
+// Consecutive cells on the same row collapse into one wide box. Without this
+// a single diagonal is ~45 separate subpaths; with it, a handful.
+function cellsToPath(cells) {
+  const rows = new Map();
+  const seen = new Set();
+  for (const [x, y] of cells) {
+    const k = x + "," + y;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    if (!rows.has(y)) rows.set(y, []);
+    rows.get(y).push(x);
+  }
+  let d = "";
+  for (const [y, xs] of rows) {
+    xs.sort((m, n) => m - n);
+    let start = xs[0];
+    let prev = xs[0];
+    for (let i = 1; i <= xs.length; i++) {
+      if (xs[i] === prev + 1) { prev = xs[i]; continue; }
+      const w = prev - start + 1;
+      d += `M${start} ${y}h${w}v1h-${w}z`;
+      start = xs[i];
+      prev = xs[i];
+    }
+  }
+  return d;
+}
+
+// A small irregular cluster of connected stars, seeded off the skill's id so
+// it is stable across re-renders instead of reshuffling every visit.
 function buildConstellationSVG(skillId) {
   const rand = seededRandom(hashString(skillId));
-  const pointCount = 6 + Math.floor(rand() * 4); // 6-9 points
-  const size = 200;
-  const cx = size / 2;
-  const cy = size / 2;
+  const pointCount = 6 + Math.floor(rand() * 4); // 6-9 stars
+  const c = GRID / 2;
   const points = [];
   for (let i = 0; i < pointCount; i++) {
     const angle = (i / pointCount) * Math.PI * 2 + rand() * 0.6;
-    const radius = size * (0.18 + rand() * 0.32);
+    const radius = GRID * (0.16 + rand() * 0.28);
     points.push({
-      x: cx + Math.cos(angle) * radius,
-      y: cy + Math.sin(angle) * radius,
+      x: Math.round(c + Math.cos(angle) * radius),
+      y: Math.round(c + Math.sin(angle) * radius),
     });
   }
-  // Connect each point to the next 1-2 points (by index, not nearest-
-  // neighbor) so the lines cross through the middle sometimes, the way a
-  // real constellation's connecting lines usually do.
-  let lines = "";
+
+  // Connect each star to the next, and sometimes to the one after that, so
+  // lines cut across the middle the way real constellation lines do.
+  let cells = [];
   points.forEach((p, i) => {
     const next = points[(i + 1) % points.length];
-    lines += `<line x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${next.x.toFixed(1)}" y2="${next.y.toFixed(
-      1
-    )}" />`;
-    if (rand() > 0.55) {
+    cells = cells.concat(bresenham(p.x, p.y, next.x, next.y));
+    if (rand() > 0.78) {
       const skip = points[(i + 2) % points.length];
-      lines += `<line x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${skip.x.toFixed(1)}" y2="${skip.y.toFixed(
-        1
-      )}" />`;
+      cells = cells.concat(bresenham(p.x, p.y, skip.x, skip.y));
     }
   });
+
+  // Stars sit on top of the lines. Each carries its own twinkle period and
+  // offset as CSS custom properties, so no two blink together; the biggest
+  // ones also get a four-pixel cross that pops in and out, which is the part
+  // you actually read as twinkling from across the screen.
   const stars = points
-    .map((p) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${2 + rand() * 2.2}" />`)
+    .map((p) => {
+      const roll = rand();
+      const s = roll < 0.3 ? 4 : roll < 0.62 ? 3 : 2;
+      const o = Math.floor(s / 2);
+      const vars = `--tw:${(2.6 + rand() * 3.6).toFixed(2)}s;--td:${(rand() * 4.5).toFixed(2)}s`;
+      const box = `<rect x="${p.x - o}" y="${p.y - o}" width="${s}" height="${s}" style="${vars}" />`;
+      if (s < 4) return box;
+      return `${box}<g class="constellation-spark" style="${vars}">` +
+        `<rect x="${p.x - o - 2}" y="${p.y}" width="1" height="1" />` +
+        `<rect x="${p.x - o + s + 1}" y="${p.y}" width="1" height="1" />` +
+        `<rect x="${p.x}" y="${p.y - o - 2}" width="1" height="1" />` +
+        `<rect x="${p.x}" y="${p.y - o + s + 1}" width="1" height="1" />` +
+        `</g>`;
+    })
     .join("");
-  return `<svg class="constellation-svg" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-    <g class="constellation-lines">${lines}</g>
+
+  return `<svg class="constellation-svg" viewBox="0 0 ${GRID} ${GRID}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+    <path class="constellation-lines" d="${cellsToPath(cells)}" />
     <g class="constellation-stars">${stars}</g>
   </svg>`;
+}
+
+// A field of loose pixel stars behind the ring. Not part of any constellation
+// — it is what makes the screen read as sky rather than as three diagrams on a
+// photo. Fixed seed, so it is the same sky every time you open Skills.
+function buildStarfield(count = 130) {
+  const rand = seededRandom(hashString("toefu-sky"));
+  let out = "";
+  for (let i = 0; i < count; i++) {
+    const roll = rand();
+    const size = roll < 0.62 ? 2 : roll < 0.9 ? 3 : 4;
+    const x = (rand() * 100).toFixed(2);
+    const y = (rand() * 100).toFixed(2);
+    const dim = 0.35 + rand() * 0.55;
+    out += `<i style="left:${x}%;top:${y}%;--s:${size}px;--o:${dim.toFixed(2)};` +
+      `--tw:${(2.2 + rand() * 5).toFixed(2)}s;--td:${(rand() * 6).toFixed(2)}s"></i>`;
+  }
+  return `<div class="skills-starfield" aria-hidden="true">${out}</div>`;
 }
 
 // The reference art's top bar shows an actual game character's stats
@@ -119,6 +201,8 @@ export function renderSkillsView(container) {
   const el = document.createElement("div");
   el.className = "skills-fullscreen";
   el.appendChild(renderTopNav("skills"));
+
+  el.insertAdjacentHTML("beforeend", buildStarfield());
 
   const statsBar = renderStatsBar();
   el.appendChild(statsBar);
@@ -170,7 +254,6 @@ export function renderSkillsView(container) {
                 .join("")}</div>`
             : ""
         }
-        <p class="item-description">${skill.description}</p>
       </div>
     `;
     node.addEventListener("click", () => {

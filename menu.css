@@ -1104,6 +1104,255 @@ label[for],
      .info-card above. Nothing to override here. */
 }
 
+/* ---------- about me (the Map direction) ------------------------------------
+   A social-profile layout: header row on top, then a fixed left rail against a
+   scrolling right-hand feed of dated update cards. Ported from the
+   night-market /about page and redrawn in this menu's own type and chrome.
+
+   The photos are the only things here that aren't type or a hairline, and they
+   are deliberately low-res PNGs shown with image-rendering: pixelated — same
+   treatment as the room and the item viewers, so nothing on this screen is
+   smoother than anything else on the site. */
+.about-fullscreen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The scroller is this element, not the window: the top nav and RESUME are
+   pinned over it and must not travel with the content. */
+.about-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Bottom padding clears the fixed nav bar — without it the last update card
+     and the footer sit underneath it. */
+  padding: 1.4rem clamp(1rem, 5vw, 4rem) 7rem;
+  /* Deliberately no backdrop: the paused room reads straight through the page,
+     which is the whole reason this screen looks like it belongs to the room
+     rather than sitting on top of it. Everything here is authored the same way
+     the rest of the menu is — cream ink and cream hairlines, flipped to dark by
+     #app's inversion — so it lands as dark type over the lit room. */
+}
+.about-content {
+  max-width: 1180px;
+  margin: 0 auto;
+  font-family: var(--ui-font);
+  color: var(--ink);
+}
+
+/* Photo left, name and intro right, on the same 300px/1fr split the columns
+   below use — so the portrait sits directly above the contact list rather than
+   floating on its own grid. */
+.about-header-row {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: clamp(1.2rem, 4vw, 3rem);
+  align-items: end;
+}
+.about-photo-frame {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid var(--ink);
+  overflow: hidden;
+}
+.about-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.about-header h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 6vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.05;
+}
+.about-header h2 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.1rem, 2.6vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.about-header p {
+  margin: 0 0 0.6rem;
+  max-width: 62ch;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.about-columns {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: clamp(1.2rem, 4vw, 3rem);
+  align-items: start;
+  margin-top: 2rem;
+}
+
+.about-contact-list {
+  list-style: none;
+  margin: 0 0 1.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+.about-contact-list a,
+.about-contact-place {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+.about-contact-list a:hover span { text-decoration: underline; }
+.about-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.about-rail-label {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.about-clients-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+  margin-bottom: 1.6rem;
+}
+.about-client-tile {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--panel-border);
+}
+
+.about-tag-box {
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.1rem;
+}
+.about-tag-box h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.about-tag-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.75;
+  color: var(--ink-dim);
+}
+.about-tag-list li::before { content: "- "; }
+
+.about-box {
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 1.1rem 1.3rem;
+  margin-bottom: 1.1rem;
+  max-width: 660px;
+}
+.about-box h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.about-updated {
+  margin: 0 0 0.85rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+}
+.about-box p {
+  margin: 0 0 0.7rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+.about-box p:last-child { margin-bottom: 0; }
+
+.about-job { margin-bottom: 1rem; }
+.about-job:last-child { margin-bottom: 0; }
+.about-job-role {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+}
+.about-job-dates {
+  margin: 0 0 0.25rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.about-button {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.55rem 1.3rem;
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: none;
+  cursor: pointer;
+}
+.about-button:hover { background: rgba(238, 231, 214, 0.12); }
+
+.about-footer {
+  margin-top: 2rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  opacity: 0.75;
+}
+.about-footer p { margin: 0.15rem 0; }
+
+/* Two columns are kept on phones rather than stacked — a single narrow column
+   turns the rail's client grid into a stack of six full-width photos and
+   pushes the first update card two screens down. The fixed 300px rail becomes
+   proportional instead. */
+@media (max-width: 900px) {
+  .about-header-row,
+  .about-columns { grid-template-columns: 38% 1fr; gap: 0.9rem; }
+  /* The intro runs several times taller than the portrait at this width, so
+     bottom-aligning the two leaves the photo stranded at the end of a column
+     of empty space. Top-aligned, they start together. */
+  .about-header-row { align-items: start; }
+  .about-contact-list { font-size: 0.8rem; gap: 0.45rem; }
+  .about-icon { width: 13px; height: 13px; }
+  .about-box { padding: 0.8rem 0.9rem; }
+  .about-box h3 { font-size: 1.05rem; }
+  .about-box p { font-size: 0.8rem; }
+  .about-tag-box { padding: 0.7rem 0.8rem; }
+  .about-tag-list { font-size: 0.72rem; line-height: 1.6; }
+}
+
 /* ---------- skills: constellation carousel ---------- */
 /* Full-screen, like items/portfolio — a character-stat-style bar on top (see
    renderStatsBar in skillsView.js for why it shows different fields than
@@ -1277,22 +1526,76 @@ label[for],
   width: 100%;
   height: 100%;
   overflow: visible;
-  filter: drop-shadow(0 0 10px rgba(238, 231, 214, 0.35));
+  /* No blur, no glow: everything here is drawn on a 64-cell grid and a soft
+     shadow would put grey fringes on cells that are meant to be one colour.
+     The hard 1-cell offset shadow lives in pause-bridge.css, where the
+     colours have to be authored per inversion state anyway. */
+  shape-rendering: crispEdges;
 }
-.constellation-lines line {
-  stroke: rgba(238, 231, 214, 0.55);
-  stroke-width: 1;
+/* Colour for the lines, stars and sparks is set in pause-bridge.css — the
+   whole menu is run through invert(1), so a white authored here would come
+   out black. Structure only in this file. */
+.constellation-lines {
+  fill-rule: nonzero;
+  opacity: 0.68;
 }
-.constellation-stars circle {
-  fill: #eee7d6;
+
+/* The loose sky behind the ring. Square divs rather than an SVG so each star
+   is an exact device-pixel box at any viewport size — an SVG would have to
+   scale its viewBox and put half-lit edges on a 2px mark. */
+.skills-starfield {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.skills-starfield i {
+  position: absolute;
+  width: var(--s, 2px);
+  height: var(--s, 2px);
+  opacity: var(--o, 0.6);
+  animation: sky-twinkle var(--tw, 4s) steps(1, end) var(--td, 0s) infinite;
+}
+@keyframes sky-twinkle {
+  0%, 64% { opacity: var(--o, 0.6); }
+  72% { opacity: 0.12; }
+  80% { opacity: 1; }
+  88% { opacity: 0.3; }
+  94%, 100% { opacity: var(--o, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skills-starfield i { animation: none; }
+}
+
+/* Each star carries its own --tw (period) and --td (offset) inline, so no two
+   blink together. steps(1, end) is what keeps it a blink rather than a fade —
+   a smooth opacity ramp reads as a glow, which is the opposite of the look. */
+.constellation-stars rect {
+  animation: star-twinkle var(--tw, 3s) steps(1, end) var(--td, 0s) infinite;
+}
+.constellation-spark {
+  animation: star-spark var(--tw, 3s) steps(1, end) var(--td, 0s) infinite;
+}
+@keyframes star-twinkle {
+  0%, 58% { opacity: 1; }
+  66% { opacity: 0.45; }
+  74% { opacity: 0.9; }
+  82% { opacity: 0.3; }
+  90%, 100% { opacity: 1; }
+}
+@keyframes star-spark {
+  0%, 70% { opacity: 0; }
+  76%, 84% { opacity: 1; }
+  90%, 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .constellation-stars rect,
+  .constellation-spark { animation: none; }
 }
 /* Matching the reference: every visible skill shows its own name + bar at
    the same time, not just the centered one — only the description line
    is reserved for whichever skill is actually centered. */
-.skill-node.is-active .constellation-svg {
-  filter: drop-shadow(0 0 16px rgba(238, 231, 214, 0.6));
-}
-.skill-node:not(.is-active) .skill-card .item-description,
+.skill-node:not(.is-active) .constellation-svg { opacity: 0.5; }
 .skill-node:not(.is-active) .skill-card .skill-dots {
   display: none;
 }
@@ -1309,12 +1612,12 @@ label[for],
   font-family: var(--ui-font);
   font-weight: 700;
   margin: 0;
-  font-size: 1.15rem;
-  letter-spacing: 0.12em;
+  font-size: clamp(1.5rem, 2.6vw, 2.15rem);
+  letter-spacing: 0.14em;
   text-shadow: 0 0 10px rgba(0, 0, 0, 0.85), 0 0 3px rgba(0, 0, 0, 0.9);
 }
 .skill-divider {
-  width: min(170px, 55%);
+  width: min(240px, 72%);
   height: auto;
   display: block;
   opacity: 0.9;

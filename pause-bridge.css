@@ -147,8 +147,45 @@ body.paused #pause-open-btn {
 #pause-menu-root.menu-inverted #app,
 #pause-menu-root.menu-inverted #app canvas,
 #pause-menu-root.menu-inverted #app .portfolio-media,
+#pause-menu-root.menu-inverted #app .about-photo,
 #pause-menu-root.menu-inverted #app .gallery-thumb img {
   filter: invert(1) hue-rotate(180deg);
+}
+
+/* ---- skills constellations: white ----------------------------------------
+   Same trick as the compass labels below. The stars, the connecting lines and
+   the spark crosses are all fills, so one colour per inversion state covers
+   the lot. Authored BLACK under .menu-inverted because the filter flips it to
+   the white that was actually wanted.
+
+   The shadow is a hard 1-cell offset with zero blur — a blurred glow would put
+   grey fringes on cells that are meant to be a single flat colour, and it is
+   the contrast against the nebula that makes the pixels read at all. It flips
+   the same way, so it is authored dark when nothing inverts it and light when
+   something does. */
+#pause-menu-root #app .constellation-lines,
+#pause-menu-root #app .constellation-stars rect,
+#pause-menu-root #app .constellation-spark rect {
+  fill: #ffffff;
+}
+#pause-menu-root #app .constellation-svg {
+  filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
+}
+#pause-menu-root #app .skills-starfield i {
+  background: #ffffff;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55);
+}
+#pause-menu-root.menu-inverted #app .constellation-lines,
+#pause-menu-root.menu-inverted #app .constellation-stars rect,
+#pause-menu-root.menu-inverted #app .constellation-spark rect {
+  fill: #000000;
+}
+#pause-menu-root.menu-inverted #app .constellation-svg {
+  filter: drop-shadow(2px 2px 0 rgba(255, 255, 255, 0.7));
+}
+#pause-menu-root.menu-inverted #app .skills-starfield i {
+  background: #000000;
+  box-shadow: 1px 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 /* ---- compass point labels: white ------------------------------------------
