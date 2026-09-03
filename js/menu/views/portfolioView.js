@@ -19,7 +19,12 @@ import { fitTextToOneLine } from "../utils/fitTextToOneLine.js";
 // LEFT point and is mirrored, so right steps back out toward the compass.
 
 function getCategories() {
-  return ["All", ...portfolioCategories.map((c) => c.name)];
+  // "All" stays pinned to the top; the rest of the rail reads alphabetically,
+  // same as the item list does.
+  const names = portfolioCategories
+    .map((c) => c.name)
+    .sort((a, b) => a.localeCompare(b));
+  return ["All", ...names];
 }
 
 function projectsInCategory(cat) {

@@ -170,6 +170,7 @@ export const items = [
   {
     ...placeholder("item-61", "Glo Gang Layered Tee", "Tops"),
     model: "/menu/models/glo-gang-layered-tee.glb",
+    viewerStartAngle: { thetaDeg: 176.5, phiDeg: 86.0 },
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },

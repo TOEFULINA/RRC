@@ -73,6 +73,10 @@
   z-index: 2;
   display: grid;
   justify-items: center;
+  /* How far down the resting position sits, so the nano's base lands in the
+     speaker's own dock slot rather than floating above it. Tune this one
+     number if the seat drifts. */
+  --ipod-seat: 2.3rem;
   transform: translateY(-140%);
 }
 /* Comes down out of frame, tips level on the way, drops the last few
@@ -82,11 +86,11 @@
   animation: ipod-dock-in 0.78s cubic-bezier(0.32, 0.9, 0.3, 1) forwards;
 }
 @keyframes ipod-dock-in {
-  from   { transform: translateY(-140%) rotate(-4deg) scale(0.96); }
-  62%    { transform: translateY(4%)    rotate(0.6deg) scale(1); }
-  78%    { transform: translateY(-2.5%) rotate(-0.4deg); }
-  90%    { transform: translateY(1.2%)  rotate(0deg); }
-  to     { transform: translateY(0)     rotate(0deg) scale(1); }
+  from { transform: translateY(-140%) rotate(-4deg) scale(0.96); }
+  62%  { transform: translateY(calc(var(--ipod-seat) + 0.5rem)) rotate(0.6deg) scale(1); }
+  78%  { transform: translateY(calc(var(--ipod-seat) - 0.35rem)) rotate(-0.4deg); }
+  90%  { transform: translateY(calc(var(--ipod-seat) + 0.16rem)) rotate(0deg); }
+  to   { transform: translateY(var(--ipod-seat)) rotate(0deg) scale(1); }
 }
 
 .ipod {
@@ -125,99 +129,125 @@
   pointer-events: none;
 }
 
-/* The dock it sits in — a dark lip the body disappears into, so the drop
-   ends on something instead of stopping in mid-air. */
-.ipod-dock::after {
-  content: "";
-  width: min(70vw, 17rem);
-  height: 1.25rem;
-  margin-top: -0.4rem;
-  border-radius: 0 0 0.5rem 0.5rem;
-  background: linear-gradient(#2b2b30, #17171b 55%, #0d0d10);
-  box-shadow:
-    inset 0 3px 6px rgba(0, 0, 0, 0.85),
-    0 0.5rem 1.2rem rgba(0, 0, 0, 0.55);
-}
 
-/* The 2-inch screen is landscape 4:3, and the gen 3 split it: menu list down
-   the left, the current track's art on the right. Same split here. */
+/* The 2-inch screen, laid out like the real Now Playing view: a title bar
+   across the top, sleeve art bottom-left, track details up the right, and
+   elapsed / scrubber / remaining along the bottom. */
 .ipod-screen {
   display: grid;
   aspect-ratio: 4 / 3;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto 1fr auto;
   grid-template-areas:
-    "art meta"
-    "art count"
-    "bar bar";
-  gap: 0.25rem 0.55rem;
-  align-content: center;
-  justify-content: center;
+    "chrome chrome"
+    "art    meta"
+    "foot   foot";
+  gap: 0.3rem 0.45rem;
   min-height: 0;
-  padding: 0.45rem 0.5rem;
+  padding: 0.3rem 0.35rem 0.32rem;
   border-radius: 0.28rem;
   background: #0e0f14;
   color: #e8e6df;
-  /* glass sunk into the body */
+  /* glass sunk into the aluminium */
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.9),
     inset 0 2px 5px rgba(0, 0, 0, 0.8),
     0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
-.ipod-art {
-  grid-area: art;
-  width: 5.6rem;
-  aspect-ratio: 1;
-  object-fit: cover;
-  align-self: center;
-  grid-row: 1 / 3;
-  border-radius: 0.15rem;
-  background: #24262f;
+.ipod-chrome {
+  grid-area: chrome;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.08rem 0.2rem;
+  border-radius: 0.1rem;
+  /* the pale grey bar Apple put across the top */
+  background: linear-gradient(#dfe2e8, #b9bec8);
+  color: #2a2d34;
+  font: 0.5rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  letter-spacing: 0.04em;
+}
+.ipod-battery {
+  width: 0.75rem;
+  height: 0.36rem;
+  border: 1px solid #2a2d34;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #2a2d34 62%, transparent 62%);
+  position: relative;
+}
+.ipod-battery::after {
+  content: "";
+  position: absolute;
+  right: -2.5px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 1.5px;
+  height: 0.16rem;
+  background: #2a2d34;
 }
 
-.ipod-meta { grid-area: meta; min-width: 0; }
-.ipod-title {
+.ipod-art {
+  grid-area: art;
+  width: 4.3rem;
+  aspect-ratio: 1;
+  object-fit: cover;
   align-self: end;
-  max-width: 8.5rem;
-  white-space: normal;
-  font: 0.86rem/1.15 var(--ui-font, "Pix32 Cond", sans-serif);
-  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
-.ipod-artist {
-  margin-top: 0.1rem;
-  font: 0.72rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
-  color: #9b98a8;
+
+.ipod-meta {
+  grid-area: meta;
+  min-width: 0;
+  align-self: center;
+  padding-right: 0.1rem;
+}
+.ipod-title {
+  font: 0.62rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
+.ipod-artist,
+.ipod-album {
+  margin-top: 0.06rem;
+  font: 0.52rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
+  color: #b7b4c2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ipod-album { color: #8d8a99; }
 .ipod-count {
-  grid-area: count;
-  align-self: start;
-  color: #6d6a7a;
-  font: 0.6rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
-  letter-spacing: 0.1em;
+  margin-top: 0.22rem;
+  color: #8d8a99;
+  font: 0.5rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
 }
 
-/* a quick fade as the track changes, so skipping reads as a screen redraw */
-.ipod.is-changing .ipod-art,
-.ipod.is-changing .ipod-meta { animation: ipod-swap 0.22s ease-out; }
-@keyframes ipod-swap { from { opacity: 0.15; } to { opacity: 1; } }
-
+.ipod-foot {
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+.ipod-time {
+  flex: 0 0 auto;
+  color: #b7b4c2;
+  font: 0.46rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+}
 .ipod-bar {
-  grid-area: bar;
-  height: 0.3rem;
-  border-radius: 0.2rem;
-  background: #2b2d38;
+  flex: 1 1 auto;
+  height: 0.26rem;
+  border-radius: 0.13rem;
+  background: #33353f;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
   cursor: pointer;
 }
 .ipod-fill {
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: #ec1c8c;
+  background: linear-gradient(#8fb6ee, #4f7fd0);
   transition: width 0.15s linear;
 }
 

@@ -168,7 +168,9 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: #fdf4fb;   /* the boot screen's faint pink-white */
+  /* Warm cream rather than the old pink-white: the room's first frame is a
+     yellow-lit bedroom, and cutting from pink to that read as a colour jump. */
+  background: #fbf3da;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -279,10 +281,15 @@ html, body {
      a beat. */
   animation-delay: calc(var(--gb-start) + 8 * var(--gb-step) + var(--gb-fly) + var(--gb-orb-wait));
 }
+/* A percentage mask-position is measured against (container - mask), not the
+   container, so with a mask 55% wide, 170% only moves it 76% across and the
+   orb was still sitting on the last two letters when it stopped. Clearing the
+   word completely needs 100/45 = 222%, so it runs -140% to 240% and passes
+   right off both ends. */
 @keyframes gb-orb {
-  from { visibility: hidden; -webkit-mask-position: -70% 50%; mask-position: -70% 50%; }
+  from { visibility: hidden; -webkit-mask-position: -140% 50%; mask-position: -140% 50%; }
   1%   { visibility: visible; }
-  to   { visibility: visible; -webkit-mask-position: 170% 50%; mask-position: 170% 50%; }
+  to   { visibility: visible; -webkit-mask-position: 240% 50%; mask-position: 240% 50%; }
 }
 /* No mask support means no orb — better nothing than a solid pink word.
    Both spellings have to be tested: iOS Safari before 15.4 only ever had the

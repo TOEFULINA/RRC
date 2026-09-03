@@ -55,7 +55,11 @@ const POSE = {
   // Two constraints fix the height: the loft platform is at y=1.31, so the eye
   // has to stay under it AND tilt down far enough that the top of the frame
   // never reaches it either.
-  desk: { eye: [-0.72, 1.18, -1.10], look: [-1.26, 0.78, -1.10], fov: 68 },
+  // Just under the loft platform (1.31m) looking down the desk, on as long a
+  // lens as the space allows. The narrow field is what flattens the
+  // perspective toward orthographic — going higher isn't an option, there is
+  // a bed in the way, so the flattening has to come from the lens.
+  desk: { eye: [-1.06, 1.28, -1.05], look: [-1.27, 0.82, -1.08], fov: 34 },
 };
 
 const TWEEN_HOLD = 0.18;   // beat between the camera arriving and the panel
@@ -65,6 +69,7 @@ let canvasEl = null;
 let onTween = null;        // (pose, done) => void   — main.js's startCamTween
 let onFreeze = null;       // (dataUrl) => void      — stop the loop, show still
 let onThaw = null;         // ()       => void       — resume the loop
+let onClip = null;         // (y|null) => void       — cut away above y
 
 const found = new Map();   // id -> { meshes: [], box: Box3 }
 const ray = new THREE.Raycaster();
@@ -80,6 +85,7 @@ export function initStations(model, cam, canvas, hooks) {
   onTween = hooks.tween;
   onFreeze = hooks.freeze;
   onThaw = hooks.thaw;
+  onClip = hooks.clip;
 
   found.clear();
   model.traverse((obj) => {
@@ -183,6 +189,9 @@ export function openStation(id, bounds, current) {
   if (openId || opening || !found.has(id)) return false;
   opening = true;
   restorePose = current;
+  // Clip before the flight starts, so the camera rising through the loft
+  // reads as the bed clearing out of the way rather than as a glitch.
+  onClip?.(POSE[id]?.clipY ?? null);
   onTween(poseFor(id, bounds), () => {
     // The camera has arrived — take the still, stop the loop, raise the panel.
     setTimeout(() => {
@@ -200,6 +209,7 @@ export function closeStation() {
   const id = openId;
   hidePanel(id);
   openId = null;
+  onClip?.(null);
   onThaw();
   if (restorePose) {
     const back = restorePose;
@@ -273,14 +283,25 @@ function buildPlayer(parent) {
   const dock = el("div", "ipod-dock", parent);
   const pod = el("div", "ipod", dock);
   const screen = el("div", "ipod-screen", pod);
+  // Laid out like the real Now Playing screen: title bar, art bottom-left,
+  // track details up the right, elapsed / bar / remaining across the bottom.
+  const chrome = el("div", "ipod-chrome", screen);
+  el("span", "ipod-chrome-label", chrome).textContent = "Now Playing";
+  el("span", "ipod-battery", chrome);
   const art = el("img", "ipod-art", screen);
   art.alt = "";
   const meta = el("div", "ipod-meta", screen);
   const title = el("div", "ipod-title", meta);
   const artist = el("div", "ipod-artist", meta);
-  const count = el("div", "ipod-count", screen);
-  const bar = el("div", "ipod-bar", screen);
+  const album = el("div", "ipod-album", meta);
+  const count = el("div", "ipod-count", meta);
+  const foot = el("div", "ipod-foot", screen);
+  const elapsed = el("span", "ipod-time", foot);
+  const bar = el("div", "ipod-bar", foot);
   const fill = el("div", "ipod-fill", bar);
+  const remain = el("span", "ipod-time", foot);
+  elapsed.textContent = "0:00";
+  remain.textContent = "-0:00";
   bar.addEventListener("pointerdown", (e) => {
     if (!audio || !audio.duration) return;
     const r = bar.getBoundingClientRect();
@@ -295,7 +316,7 @@ function buildPlayer(parent) {
   next.addEventListener("click", () => step(1));
   play.addEventListener("click", togglePlay);
 
-  playerEls = { dock, pod, art, title, artist, count, fill, play };
+  playerEls = { dock, pod, art, title, artist, album, count, fill, elapsed, remain, play };
 }
 
 async function loadTracks() {
@@ -317,6 +338,7 @@ function showTrack(i) {
   playerEls.art.src = t.cover;
   playerEls.title.textContent = t.title;
   playerEls.artist.textContent = t.artist;
+  playerEls.album.textContent = t.album || t.artist;
   playerEls.count.textContent = `${i + 1} of ${tracks.length}`;
   // retrigger the little cross-fade
   playerEls.pod.classList.remove("is-changing");
@@ -333,9 +355,16 @@ function playTrack(i) {
   if (!audio) {
     audio = new Audio();
     audio.preload = "none";
+    const clock = (sec) => {
+      if (!isFinite(sec)) return "0:00";
+      const m = Math.floor(sec / 60);
+      return `${m}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+    };
     audio.addEventListener("timeupdate", () => {
       const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
       playerEls.fill.style.width = `${pct}%`;
+      playerEls.elapsed.textContent = clock(audio.currentTime);
+      playerEls.remain.textContent = `-${clock((audio.duration || 0) - audio.currentTime)}`;
     });
     audio.addEventListener("ended", () => step(1));
     audio.addEventListener("play", () => playerEls.pod.classList.add("is-playing"));

@@ -11,7 +11,7 @@
 // exists beside it, and byte-identical files collapse to one (preferring the
 // copy). Only the gallery drops them — the source folders are untouched.
 // Everything kept is normalised on the
-// way in — stills to jpg at 1600px long edge with a 480px thumb, video to
+// way in — stills to jpg at 1600px long edge with a 320px WebP thumb, video to
 // h264/mp4 at 1280px long edge with a poster frame pulled at one second — so
 // nothing here depends on a format a browser might refuse.
 //
@@ -42,7 +42,7 @@ function image(catName, n, id, w, h) {
     kind: "image",
     category: catName,
     full: `/menu/magic/${slugOf(catName)}/${id}.jpg`,
-    thumb: `/menu/magic/thumbs/${slugOf(catName)}/${id}.jpg`,
+    thumb: `/menu/magic/thumbs/${slugOf(catName)}/${id}.webp`,
     stats: [{ label: "Year", value: "2026" }],
     description: "",
   };
@@ -55,7 +55,10 @@ function video(catName, n, id) {
     kind: "video",
     category: catName,
     full: `/menu/magic/${slugOf(catName)}/${id}.mp4`,
-    thumb: `/menu/magic/thumbs/${slugOf(catName)}/${id}.jpg`,
+    // Animated: the first 1.6s of the clip at 12fps, as a looping WebP. It is
+    // an <img>, so it plays on its own with no video element and no script —
+    // the grid moves without thirteen decoders running.
+    thumb: `/menu/magic/thumbs/${slugOf(catName)}/${id}.webp`,
     stats: [{ label: "Year", value: "2026" }],
     description: "",
   };

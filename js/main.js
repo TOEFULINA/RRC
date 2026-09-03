@@ -491,7 +491,9 @@ camera.lookAt(target);
 
 const LOOK_SENSITIVITY = 0.0025;
 const LOOK_PITCH_MAX = THREE.MathUtils.degToRad(80);
-const LOOK_PITCH_MIN = THREE.MathUtils.degToRad(-60);
+// -60 was enough for walking around, but the desk view looks almost straight
+// down and the clamp was quietly flattening it back out every frame.
+const LOOK_PITCH_MIN = THREE.MathUtils.degToRad(-86);
 const LOOK_TARGET_DISTANCE = 2;
 
 function applyLookDelta(dx, dy) {
@@ -808,6 +810,23 @@ function pickSeat(e) {
 // one is open the render loop stops entirely and a still of the last frame
 // stands in for the room — see stations.js for why.
 let stationFrozen = false;
+
+// The desk is built into the loft bed, so there is a mattress and a platform
+// directly above it. Any camera high enough to look down on the desk is
+// inside them. Rather than compromise the angle, the station can ask for
+// everything above a given height to be clipped away for as long as it is
+// open — you rise up and the bed simply is not there.
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+function setClipHeight(y) {
+  if (y == null) {
+    renderer.clippingPlanes = [];
+    renderer.localClippingEnabled = false;
+    return;
+  }
+  clipPlane.constant = y;
+  renderer.clippingPlanes = [clipPlane];
+  renderer.localClippingEnabled = true;
+}
 
 function freezeToStill() {
   renderer.render(scene, camera);
@@ -1160,6 +1179,7 @@ Promise.all([modelBytes, bootAnimationDone()])
     const seats = initSeat(model);
     const stations = initStations(model, camera, canvas, {
       tween: startCamTween, freeze: freezeToStill, thaw: thawFromStill,
+      clip: setClipHeight,
     });
     console.info(`stations: ${stations.join(", ") || "none"}.`);
     if (COLLISION_ENABLED) {
