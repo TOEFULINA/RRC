@@ -38,7 +38,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
-import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01d1";
+import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-03web3";
 import { initRainAudio, toggleRainAudio } from "./rainAudio.js?v=2026-09-01d1";
 import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox,
          vinylNeighbour, vinylIndexOf, vinylCount } from "./vinyl.js?v=4";

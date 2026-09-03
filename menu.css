@@ -102,7 +102,7 @@ textarea {
   font-family: var(--ui-font);
   font-weight: 300;
   overflow-x: hidden;
-  cursor: url("/menu/cursors/logo-default.png") 0 0, auto;
+  cursor: url("/menu/cursors/logo-default-px.png") 0 0, auto;
 }
 
 @scope (#pause-menu-root) {
@@ -114,7 +114,7 @@ input[type="button"],
 input[type="submit"],
 label[for],
 .item-viewer canvas {
-  cursor: url("/menu/cursors/logo-pointer.png") 0 0, pointer;
+  cursor: url("/menu/cursors/logo-pointer-px.png") 0 0, pointer;
 }
 
 #app {
@@ -968,8 +968,10 @@ label[for],
   border: none;
   background: none;
   padding: 0;
+  /* No dimming. The collage used to sit at brightness(0.85) and come up to
+     full on hover, which read as the artwork being faded until you touched
+     it — the work should just be the work. */
   transition: filter 0.2s ease;
-  filter: brightness(0.85);
 }
 .gallery-thumb img {
   display: block;
@@ -978,7 +980,7 @@ label[for],
 }
 .gallery-thumb:hover,
 .gallery-thumb:focus-visible {
-  filter: brightness(1.05);
+  filter: brightness(1.08);
   outline: none;
 }
 .gallery-thumb[data-kind="video"]::after {
@@ -1259,7 +1261,7 @@ label[for],
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  cursor: url("/menu/cursors/logo-pointer.png") 0 0, pointer;
+  cursor: url("/menu/cursors/logo-pointer-px.png") 0 0, pointer;
   /* Slow, decelerating swing instead of a quick snap — reads as something
      big and heavy settling into place rather than a light UI flick. */
   transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.7s ease;

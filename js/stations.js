@@ -59,7 +59,7 @@ const POSE = {
   // lens as the space allows. The narrow field is what flattens the
   // perspective toward orthographic — going higher isn't an option, there is
   // a bed in the way, so the flattening has to come from the lens.
-  desk: { eye: [-1.02, 1.295, -1.05], look: [-1.12, 0.80, -1.07], fov: 66 },
+  desk: { eye: [-1.02, 1.295, -1.05], look: [-1.12, 0.80, -1.07], fov: 40 },
 };
 
 const TWEEN_HOLD = 0.18;   // beat between the camera arriving and the panel
@@ -265,6 +265,8 @@ function showPanel(id) {
 }
 
 function hidePanel(id) {
+  if (zoomed) { zoomed.classList.remove("is-zoomed"); zoomed = null; }
+  deskEls?.board.classList.remove("has-zoom");
   root.classList.remove("is-open");
   if (id === "speaker" && audio) audio.pause();
   setTimeout(() => { if (!openId) root.hidden = true; }, 320);
@@ -435,20 +437,37 @@ async function loadPieces() {
 
 // Pointer-events drag: works the same for mouse and touch, and because the
 // board is plain DOM there is no raycasting and no render loop behind it.
+//
+// Drag and tap share one gesture. Whether it was a tap is decided on release
+// by how far the pointer travelled — under a few pixels and it is a tap, which
+// lifts the sheet off the desk and holds it flat to camera. Tap again and it
+// goes back exactly where it was lying.
+const TAP_SLOP = 6;           // px of travel still counted as a tap
+let zoomed = null;
+
 function makeDraggable(node) {
   let grab = null;
   node.addEventListener("pointerdown", (e) => {
     e.preventDefault();
+    if (zoomed && zoomed !== node) return;     // one at a time
     node.setPointerCapture(e.pointerId);
-    node.style.zIndex = ++topZ;
-    node.classList.add("is-held");
     const r = node.getBoundingClientRect();
     const b = deskEls.board.getBoundingClientRect();
-    grab = { dx: e.clientX - r.left - r.width / 2, dy: e.clientY - r.top - r.height / 2, b };
+    grab = {
+      dx: e.clientX - r.left - r.width / 2, dy: e.clientY - r.top - r.height / 2, b,
+      x0: e.clientX, y0: e.clientY, moved: 0,
+    };
+    if (zoomed !== node) {
+      node.style.zIndex = ++topZ;
+      node.classList.add("is-held");
+    }
     deskEls.hint.classList.add("is-gone");
   });
   node.addEventListener("pointermove", (e) => {
     if (!grab) return;
+    grab.moved = Math.max(grab.moved, Math.hypot(e.clientX - grab.x0, e.clientY - grab.y0));
+    // A zoomed sheet doesn't slide around; it's being read, not shuffled.
+    if (zoomed === node || grab.moved <= TAP_SLOP) return;
     const x = ((e.clientX - grab.dx - grab.b.left) / grab.b.width) * 100;
     const y = ((e.clientY - grab.dy - grab.b.top) / grab.b.height) * 100;
     node.style.left = `${x}%`;
@@ -456,10 +475,26 @@ function makeDraggable(node) {
   });
   const drop = (e) => {
     if (!grab) return;
+    const wasTap = grab.moved <= TAP_SLOP;
     grab = null;
     node.classList.remove("is-held");
     try { node.releasePointerCapture(e.pointerId); } catch { /* already gone */ }
+    if (wasTap) toggleZoom(node);
   };
   node.addEventListener("pointerup", drop);
   node.addEventListener("pointercancel", drop);
+}
+
+function toggleZoom(node) {
+  if (zoomed === node) {
+    node.classList.remove("is-zoomed");
+    deskEls.board.classList.remove("has-zoom");
+    zoomed = null;
+    return;
+  }
+  if (zoomed) zoomed.classList.remove("is-zoomed");
+  zoomed = node;
+  node.style.zIndex = ++topZ;
+  node.classList.add("is-zoomed");
+  deskEls.board.classList.add("has-zoom");
 }

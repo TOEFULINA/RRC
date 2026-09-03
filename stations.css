@@ -342,8 +342,10 @@
 .desk-piece {
   position: absolute;
   /* To scale against the room: a sheet of paper is about 21cm, the poscas
-     beside it about 13cm, and this holds that ratio at this camera. */
-  width: clamp(4.2rem, 14vw, 8.5rem);
+     beside it about 13cm. The lens went from 66 to 40 degrees, which magnifies
+     the desk about 1.8x, so the sheets have to grow by the same factor or they
+     stop reading as paper. */
+  width: clamp(7rem, 25vw, 15rem);
   /* Sheet of paper, not a square print — the art is cropped to fill it. */
   aspect-ratio: 3 / 4;
   object-fit: cover;
@@ -364,6 +366,27 @@
   -webkit-user-drag: none;
   transition: box-shadow 0.15s ease;
 }
+/* Tapped: comes off the desk, squares up to camera and fills the frame. The
+   transform is a full override rather than an addition, because the lying-flat
+   rotations are exactly what has to go. */
+.desk-piece.is-zoomed {
+  left: 50% !important;
+  top: 50% !important;
+  width: min(74vw, 30rem);
+  transform: translate(-50%, -50%) rotateX(0deg) rotateZ(0deg);
+  box-shadow: 0 1.6rem 3.4rem rgba(0, 0, 0, 0.6);
+  cursor: zoom-out;
+  transition: transform 0.34s cubic-bezier(0.22, 1, 0.32, 1),
+              width 0.34s cubic-bezier(0.22, 1, 0.32, 1),
+              left 0.34s ease, top 0.34s ease, box-shadow 0.3s ease;
+}
+/* Everything else steps back while one is being read. */
+.desk-board.has-zoom .desk-piece:not(.is-zoomed) {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.desk-piece { transition: box-shadow 0.15s ease, opacity 0.25s ease; }
+
 .desk-piece.is-held {
   cursor: grabbing;
   /* lifts off the desk a little while you hold it */

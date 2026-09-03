@@ -64,6 +64,22 @@ html, body {
 #scene.hovering,
 #scene.hovering-seat { cursor: pointer; }
 
+/* The pixel cursor, in the room as well as the menu — a cursor image can't be
+   styled (image-rendering does nothing to it), so the chunkiness is baked
+   into the PNG at a 16-cell grid. Pointer devices only: a touchscreen has no
+   cursor, and coarse pointers get the OS default. */
+@media (hover: hover) and (pointer: fine) {
+  html, body, #scene {
+    cursor: url("/menu/cursors/logo-default-px.png") 0 0, auto;
+  }
+  #scene.hovering,
+  #scene.hovering-seat,
+  #scene.hovering-station,
+  button, a, .desk-piece {
+    cursor: url("/menu/cursors/logo-pointer-px.png") 0 0, pointer;
+  }
+}
+
 /* The wordmark face: the real Game Boy 1989 face with every glyph rebuilt as
    squares on a 16-per-em grid — genuinely pixelated outlines, not a filtered
    image, so it stays selectable text and scales cleanly. GameBoy.woff2 next to

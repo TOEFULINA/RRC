@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import * as THREE from "three";
+import { initCobweb, updateCobweb } from "./cobweb.js?v=3";
 
 // =========================================================== shared textures
 // Soft multi-blob wisp, drawn once and shared by every smoke sprite.
@@ -502,8 +503,9 @@ export function initAmbient(model, scene) {
   const l = initLamps(model) + initUnlitLamps(model);
   const c = initCurtain(model, scene);
   const r = initRain(scene, model);
+  const w = initCobweb(scene);
   console.info(
-    `ambient: ${s} smoke, ${d} dust, ${l} lamp material(s), curtain ${c ? "on" : "off"}, ${r} rain layer(s).`
+    `ambient: ${s} smoke, ${d} dust, ${l} lamp material(s), curtain ${c ? "on" : "off"}, ${r} rain layer(s), ${w} cobweb strand(s).`
   );
 }
 
@@ -511,6 +513,13 @@ export function initAmbient(model, scene) {
 // runs unguarded every frame — an uncaught throw would kill every subsequent
 // frame, not just the one feature. Each failure disables only itself.
 export function updateAmbient(delta, elapsed, camera) {
+  // ---- cobweb ----
+  try {
+    updateCobweb(elapsed);
+  } catch (err) {
+    console.error("ambient: cobweb —", err);
+  }
+
   // ---- smoke ----
   try {
     smokeParticles.forEach((p) => {
