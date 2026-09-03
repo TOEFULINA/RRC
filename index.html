@@ -4,27 +4,37 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>the room — portfolio</title>
-<link rel="stylesheet" href="style.css?v=2026-09-02portfolio1" />
+<link rel="stylesheet" href="style.css?v=2026-09-03hold2" />
 <!-- Ported Skyrim-compass portfolio, scoped to #pause-menu-root only (see
      menu.css's own header comments for how the scoping works) — it does
      NOT affect anything above. -->
-<link rel="stylesheet" href="menu.css?v=2026-09-02portfolio1" />
+<link rel="stylesheet" href="menu.css?v=2026-09-03hold2" />
 <!-- Glue styles new to this combined project: pause button, the room's
      blur/dim-on-pause filter, and #pause-menu-root's own fade transition. -->
-<link rel="stylesheet" href="pause-bridge.css?v=2026-09-02portfolio1" />
+<link rel="stylesheet" href="pause-bridge.css?v=2026-09-03hold2" />
 </head>
 <body>
 
-  <!-- Loading screen: a flip on the GBA boot. The wordmark drops in from the
-       top, a prism sweeps across it, then it settles and hands off to the
-       spinning model — which is the part that actually tracks the load, since
-       the room takes a good deal longer than the two seconds the boot runs. -->
+  <!-- Loading screen: the Game Boy boot, beat for beat.
+       2026 is already on screen (the Nintendo(R) slot), then the letters fly
+       in one at a time from above — large, each its own colour, shrinking into
+       place — and once the word is assembled it resolves into a single
+       gradient and a prism passes over it. Each letter is its own span so it
+       can carry its own delay and colour; --i is its position in the queue. -->
   <div id="loading-screen">
     <div class="loading-inner">
-      <!-- data-text feeds the ::after copy that carries the prism sweep. -->
-      <div class="gba-word" data-text="TOEFULINA 2026">TOEFULINA 2026</div>
-      <!-- Rendered at 72x72 and blown up by CSS - see js/loaderSpin.js -->
-      <canvas id="loading-spin" width="72" height="72"></canvas>
+      <div class="gb-word" data-text="TOEFULINA">
+        <span style="--i:0">T</span>
+        <span style="--i:1">O</span>
+        <span style="--i:2">E</span>
+        <span style="--i:3">F</span>
+        <span style="--i:4">U</span>
+        <span style="--i:5">L</span>
+        <span style="--i:6">I</span>
+        <span style="--i:7">N</span>
+        <span style="--i:8">A</span>
+      </div>
+      <div class="gb-sub">PORTFOLIO 2026</div>
       <div class="loading-sub"></div>
     </div>
   </div>
@@ -87,7 +97,7 @@
   }
   </script>
 
-  <script type="module" src="js/main.js?v=2026-09-02portfolio1"></script>
-  <script type="module" src="js/menu/main.js?v=2026-09-02portfolio1"></script>
+  <script type="module" src="js/main.js?v=2026-09-03hold2"></script>
+  <script type="module" src="js/menu/main.js?v=2026-09-03hold2"></script>
 </body>
 </html>

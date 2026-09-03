@@ -1529,3 +1529,30 @@ label[for],
   cursor: pointer;
 }
 .gallery-back:hover { color: #fff; }
+
+/* ---------- compass: keep the left label on screen ----------
+   Every label is placed a --gap clear of its star tip, which was fine when
+   this one said MAGIC. PORTFOLIO is nearly twice as wide and hangs 35px off
+   the left edge of a 375px phone.
+
+   Nudging it by a fixed amount doesn't hold — the label's width is fixed by
+   the font-size clamp below 520px while the compass keeps shrinking with the
+   viewport, so a value that clears the edge at 375 still clips at 320. So
+   this pins the label's left edge to the SCREEN instead: `left: 0` puts it at
+   the compass's own left edge, and the translate walks back exactly the
+   distance from the viewport edge to there — half the leftover space beside a
+   centred box of width min(46vw, 720px) — plus a small inset.
+
+   Left point only, mobile only. Everything else is untouched. */
+@media (max-width: 860px) {
+  /* Qualified with the id on purpose. The rest of this file sits inside
+     @scope (#pause-menu-root), and scope proximity outranks source order on a
+     specificity tie — so an unscoped `.compass-point.left` down here loses to
+     the scoped one above no matter that it comes later. One id settles it. */
+  #pause-menu-root .compass-point.left {
+    transform: translate(
+      calc(10px - (100vw - min(46vw, 720px)) / 2),
+      -50%
+    );
+  }
+}

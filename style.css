@@ -64,37 +64,254 @@ html, body {
 #scene.hovering,
 #scene.hovering-seat { cursor: pointer; }
 
-/* ---------- loading screen ---------- */
+/* The wordmark face: the real Game Boy 1989 face with every glyph rebuilt as
+   squares on a 16-per-em grid — genuinely pixelated outlines, not a filtered
+   image, so it stays selectable text and scales cleanly. GameBoy.woff2 next to
+   it is the untouched smooth cut; swap the two src lines to go back. */
+@font-face {
+  font-family: "GameBoy";
+  src: url("/menu/fonts/GameBoyPx.woff2") format("woff2"),
+       url("/menu/fonts/GameBoyPx.woff") format("woff");
+  font-display: block;   /* one short line — better to wait than flash a fallback */
+}
+
+/* The byline sets in the same face the compass uses, so the loading screen and
+   the menu it hands off to are visibly the same typeface. Declared here because
+   menu.css isn't loaded until the pause menu mounts. */
+@font-face {
+  font-family: "Pix32 Cond";
+  src: url("/menu/fonts/Pix32-Cond.woff2") format("woff2"),
+       url("/menu/fonts/Pix32-Cond.woff") format("woff");
+  font-display: block;
+}
+@font-face {
+  font-family: "Pix32";
+  src: url("/menu/fonts/Pix32.woff2") format("woff2"),
+       url("/menu/fonts/Pix32.woff") format("woff");
+  font-display: block;
+}
+
+/* ---------- loading screen: the Game Boy boot ----------
+   Traced off the reference frame by frame, because the first attempt guessed
+   and got it wrong in both respects:
+
+   MOTION. The letters do not drop straight down. They swoop in from off the
+   RIGHT, enormous and piled over each other, then arc down and left, shrinking
+   as they go and overshooting slightly before they settle. Each one starts a
+   beat after the one before, so the leading letters are already placed while
+   the trailing ones are still large and behind them.
+
+   COLOUR. Not one colour per letter. The whole word runs a single continuous
+   hue cycle as it travels — magenta, red, orange, yellow, green, cyan — and
+   arrives blue. That's why in the reference every letter on screen is a
+   different colour at any instant but they're all clearly the same sweep.
+
+   2026 sits in the Nintendo(R) slot: on screen before anything moves, magenta
+   throughout, and deliberately outside the hue cycle. */
+
+:root {
+  /* Tuned by hand in tune.html — these are her numbers, not derived ones. */
+  --gb-step: 0.07s;   /* gap between one letter setting off and the next */
+  --gb-start: 0.35s;   /* how long 2026 sits alone first */
+  --gb-fly: 0.8s;      /* how long one letter takes to rise, crest and settle */
+
+  /* Colour. --lead is where the FIRST letter enters the wheel (relative to the
+     blue everything ends on), --step is how much further round each next
+     letter starts, and --end is the shared finish: a multiple of 360 so it
+     resolves back to blue. */
+  --gb-hue-lead: 40deg;
+  --gb-hue-step: 25deg;
+  /* ONE pass round the wheel, not two.
+     Every letter travels from its own entry angle to this shared end, so how
+     far it goes is (end - entry). At 720 the first letter covered 680deg —
+     nearly two full turns — and ran the whole purple/pink/red/yellow/blue
+     sequence TWICE, which is what read as too colourful. At 360 it covers
+     320deg: one pass, ending on blue.
+
+     THE RULE while tuning: lead + 8 x step must stay BELOW this number, or the
+     last letters get a negative distance and spin backwards through the wheel.
+     40 + 8x25 = 240, comfortably under 360. */
+  --gb-hue-end: 360deg;
+
+  /* The other half of "less colourful": how saturated the letters are while
+     they're travelling. They ramp back to full by the time they land, so the
+     flight is muted and the finished wordmark still reads as solid blue. */
+  --gb-sat: 0.65;
+
+  /* The arc. It doesn't come straight up: it starts below and to the LEFT,
+     swings up and to the RIGHT, and on the way round it comes toward you —
+     that's the crest scale being the BIGGEST point, not the start. Then it
+     falls back and away into its place. Round the front, down into the back. */
+  --gb-from-x: -26vw;
+  --gb-crest-x: 6vw;
+
+  /* Final wordmark: heavier and tighter than the face sets it. */
+  /* The pink orb that crosses the finished wordmark once. */
+  --gb-orb-color: #ff6fe0;
+  --gb-orb-size: 55%;    /* how wide the glow is, as a share of the word */
+  --gb-orb-dur: 1.1s;
+  --gb-orb-wait: 0.25s;  /* beat between the last letter landing and the pass */
+
+  --gb-bold: 2px;        /* dilates the glyph without antialiasing it */
+  --gb-track: -0.015em;  /* negative tracking = less kerned */
+}
+
 #loading-screen {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: #f4f1ea;
+  background: #fdf4fb;   /* the boot screen's faint pink-white */
   display: flex;
   align-items: center;
   justify-content: center;
   transition: opacity .6s ease;
-  overflow: hidden;
+  overflow: hidden;      /* letters start well off-screen */
 }
-/* pointer-events go the instant .hidden lands, not when the fade finishes —
-   a tap during the 0.6s fade must reach the room, not this. */
 #loading-screen.hidden { opacity: 0; pointer-events: none; }
 #loading-screen.hidden * { pointer-events: none; }
 
-.loading-inner { text-align: center; }
-
-/* The canvas's drawing buffer is 72x72; this stretches it and tells the
-   browser not to smooth it, which is where the chunky pixels come from. */
-#loading-spin {
-  display: block;
-  width: 240px;
-  height: 240px;
-  margin: 0 auto;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+.loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
-@media (max-width: 520px) { #loading-spin { width: 168px; height: 168px; } }
-@media (max-height: 520px) { #loading-spin { width: 130px; height: 130px; } }
+
+.gb-word {
+  position: relative;   /* the orb overlay hangs off this */
+  display: flex;
+  font-family: "GameBoy", "Trebuchet MS", sans-serif;
+  font-size: clamp(2.2rem, 10vw, 5rem);
+  line-height: 1;
+  letter-spacing: var(--gb-track);
+  /* Blue, because blue is where every letter ENDS. Each one's hue-rotate
+     finishes on a whole number of turns, so the filter resolves to identity
+     and what you're left with is this colour. See gb-hue below. */
+  color: #2b2fd6;
+}
+
+.gb-word span {
+  display: inline-block;
+  /* Motion and hue on the same delay and the same duration: a letter starts
+     travelling and starts changing colour together, and it finishes its cycle
+     exactly as it lands. */
+  animation:
+    gb-wave var(--gb-fly) cubic-bezier(0.3, 0.15, 0.3, 1) both,
+    gb-hue var(--gb-fly) linear both;
+  animation-delay:
+    calc(var(--gb-start) + var(--i) * var(--gb-step)),
+    calc(var(--gb-start) + var(--i) * var(--gb-step));
+  /* Where this letter ENTERS the colour wheel. Each one starts a step further
+     round than the one before — first purple, next pink, and so on — then
+     runs the whole wheel as it rises. */
+  /* How far above its resting place this letter crests before dropping in —
+     and THIS is the wave. Near nothing for the first letter, growing along the
+     word, so the placed letters sit low on the left while the arriving ones
+     ride higher and higher to the right. */
+  --peak: calc(-1vh - var(--i) * 3.7vh);
+  --h0: calc(var(--gb-hue-lead) + var(--i) * var(--gb-hue-step));
+  /* Bolder by dilation rather than by faux-bold: offset copies of the glyph in
+     its own colour thicken every stem by a whole pixel and leave the edges
+     hard. Synthesised bold would smear a bitmap face sideways instead. */
+  text-shadow:
+    var(--gb-bold) 0 0 currentColor,
+    0 var(--gb-bold) 0 currentColor,
+    var(--gb-bold) var(--gb-bold) 0 currentColor;
+  will-change: transform, opacity, filter;
+}
+
+/* Up from the bottom, over the top, down into place.
+   Every earlier attempt had these coming in from the side or straight down,
+   which is why none of them looked right. They rise from below the screen,
+   overshoot ABOVE where they belong, and settle back down — and each letter
+   crests higher than the one before it (see --peak), so the word ripples into
+   existence left to right instead of nine letters doing the same hop. */
+@keyframes gb-wave {
+  from { opacity: 0; transform: translate(var(--gb-from-x), 52vh) scale(2.2); }
+  /* A one-percent fade: it doesn't ease in, it just appears — already well up
+     from the bottom and on its way. */
+  32%  { opacity: 0; }
+  33%  { opacity: 1; }
+  /* The front of the loop: furthest right, highest, and LARGEST — this is the
+     point where it has swung closest to you. */
+  60%  { transform: translate(var(--gb-crest-x), var(--peak)) scale(3.2); }
+  to   { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+/* The orb. A second copy of the word painted pink and shown only through a
+   soft travelling window — so it isn't a light drawn ON TOP of the letters,
+   it's the letters themselves going pink where it passes, which is what the
+   reference does. Sits over the spans, ignores the pointer, runs once, and
+   waits until every letter has landed and gone blue. */
+.gb-word::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: pre;
+  letter-spacing: inherit;
+  color: var(--gb-orb-color);
+  /* Matches the dilation on the real letters, or the pink copy sits a pixel
+     thin inside them and fringes at the edges. */
+  text-shadow:
+    var(--gb-bold) 0 0 var(--gb-orb-color),
+    0 var(--gb-bold) 0 var(--gb-orb-color),
+    var(--gb-bold) var(--gb-bold) 0 var(--gb-orb-color);
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 50% 160% at 50% 50%,
+    #000 0%, rgba(0,0,0,0.55) 42%, transparent 74%);
+  mask-image: radial-gradient(ellipse 50% 160% at 50% 50%,
+    #000 0%, rgba(0,0,0,0.55) 42%, transparent 74%);
+  -webkit-mask-size: var(--gb-orb-size) 100%;
+  mask-size: var(--gb-orb-size) 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: gb-orb var(--gb-orb-dur) ease-in-out both;
+  /* Starts once the last letter has settled: its delay, plus its flight, plus
+     a beat. */
+  animation-delay: calc(var(--gb-start) + 8 * var(--gb-step) + var(--gb-fly) + var(--gb-orb-wait));
+}
+@keyframes gb-orb {
+  from { visibility: hidden; -webkit-mask-position: -70% 50%; mask-position: -70% 50%; }
+  1%   { visibility: visible; }
+  to   { visibility: visible; -webkit-mask-position: 170% 50%; mask-position: 170% 50%; }
+}
+/* No mask support means no orb — better nothing than a solid pink word. */
+@supports not (mask-image: radial-gradient(#000, #000)) {
+  .gb-word::after { display: none; }
+}
+
+/* Every letter travels to the SAME end angle, and that angle is a whole
+   number of turns — so however far round it started, it resolves to zero
+   rotation and lands on the base blue. Because the start differs per letter
+   and the end doesn't, each one covers a different arc, and every arc is more
+   than a full turn: at 1080deg even the last letter (starting furthest round)
+   still goes the whole way round the wheel before it settles. */
+@keyframes gb-hue {
+  from { filter: hue-rotate(var(--h0)) saturate(var(--gb-sat)); }
+  to   { filter: hue-rotate(var(--gb-hue-end)) saturate(1); }
+}
+
+.gb-sub {
+  /* Pulled out of the centred stack and parked near the bottom of the screen,
+     and no entrance of its own — it is simply already there when the page
+     paints, the way the console's own byline is. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(9vh, env(safe-area-inset-bottom, 0px));
+  font-family: "Pix32 Cond", "Pix32", "Futura Condensed", "Arial Narrow", sans-serif;
+  font-size: clamp(0.8rem, 2.6vw, 1.15rem);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;   /* offsets the trailing letter-space, so it stays centred */
+  color: #ec1c8c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gb-word span { animation: none; }
+  .gb-word::after { animation: none; opacity: 0; }
+  .gb-word { animation: none; }
+}
 
 /* Kept in the DOM but normally empty: only ever written to if the model fails
    to load, so a failure still says so instead of leaving you on a blank page. */
@@ -104,21 +321,6 @@ html, body {
   letter-spacing: .1em;
   font-size: .8rem;
   color: #8a2b2b;
-}
-
-.loading-byline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: max(22px, env(safe-area-inset-bottom, 0px));
-  text-align: center;
-  font-family: 'VCR OSD Mono', 'Courier New', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.22em;
-  /* Dark on the off-white, where it used to be pale on blue. */
-  color: #2b2a27;
-  opacity: 0.55;
-  pointer-events: none;
 }
 
 /* ---------- intro overlay (start menu) ---------- */

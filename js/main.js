@@ -35,7 +35,6 @@ import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01d1";
 import { initRainAudio, toggleRainAudio } from "./rainAudio.js?v=2026-09-01d1";
 import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox,
          vinylNeighbour, vinylIndexOf, vinylCount } from "./vinyl.js?v=4";
-import { startLoaderSpin, stopLoaderSpin } from "./loaderSpin.js";
 
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
@@ -847,7 +846,40 @@ const loadingScreen = document.getElementById("loading-screen");
 const loadingSub = document.querySelector("#loading-screen .loading-sub");
 
 // Spin something on the loading screen while the room downloads.
-startLoaderSpin();
+
+// The boot sequence is a fixed-length piece of theatre: nine letters fly in,
+// settle, and then the pink orb crosses once. A fast connection (or a warm
+// cache) can have the room ready well before that finishes, which would cut
+// the orb off halfway. So the reveal waits for BOTH the model and the
+// animation, whichever is slower.
+//
+// It waits on the real animations rather than a hardcoded number, so retuning
+// the CSS variables retimes this automatically. The computed sum is only a
+// fallback for browsers that don't hand back pseudo-element animations, and
+// the cap is there so a paused or dropped animation can never strand the user
+// on the loading screen.
+function bootAnimationDone() {
+  // Browsers freeze CSS animations in a backgrounded tab, so `finished` would
+  // never settle and the boot screen would just sit there until the cap. If
+  // nobody is looking, there is no performance to protect — go straight in.
+  if (document.hidden) return Promise.resolve();
+  const cap = new Promise((r) => setTimeout(r, 8000));
+  let waitFor;
+  const running = (document.getAnimations ? document.getAnimations() : [])
+    .filter((a) => typeof a.animationName === "string" && a.animationName.startsWith("gb-"));
+  if (running.length) {
+    waitFor = Promise.all(running.map((a) => a.finished.catch(() => {})));
+  } else {
+    const cs = getComputedStyle(document.documentElement);
+    const sec = (name) => parseFloat(cs.getPropertyValue(name)) || 0;
+    const total =
+      sec("--gb-start") + 8 * sec("--gb-step") + sec("--gb-fly") +
+      sec("--gb-orb-wait") + sec("--gb-orb-dur");
+    const left = Math.max(0, total * 1000 - performance.now());
+    waitFor = new Promise((r) => setTimeout(r, left));
+  }
+  return Promise.race([waitFor, cap]);
+}
 
 const draco = new DRACOLoader();
 draco.setDecoderPath("menu/draco/");
@@ -935,14 +967,15 @@ loader.load(
     syncLookAnglesFromTarget();
     camera.lookAt(target);
 
-    loadingScreen?.classList.add("hidden");
-    // Kept spinning through the fade, then torn down — a second live WebGL
-    // context is a real cost and it has no reason to exist after this.
-    setTimeout(stopLoaderSpin, 700);
-    document.getElementById("mobile-controls")?.classList.add("show");
-    document.getElementById("pause-open-btn")?.classList.add("show");
+    // Room's ready, but don't yank the boot screen out from under the orb.
+    bootAnimationDone().then(() => {
+      loadingScreen?.classList.add("hidden");
 
-    setPauseMenuOpen(true);
+      document.getElementById("mobile-controls")?.classList.add("show");
+      document.getElementById("pause-open-btn")?.classList.add("show");
+
+      setPauseMenuOpen(true);
+    });
 
     console.info(`room: ${unlit} unlit, ${lit} lit, ${mirrors} mirror, ${glass} glass, ${hidden} hidden.`);
   },

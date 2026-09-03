@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>boot tuner</title>
+<style>
+@font-face {
+  font-family: "GameBoy";
+  src: url("/menu/fonts/GameBoyPx.woff2") format("woff2");
+  font-display: block;
+}
+@font-face {
+  font-family: "Pix32 Cond";
+  src: url("/menu/fonts/Pix32-Cond.woff2") format("woff2");
+  font-display: block;
+}
+@font-face {
+  font-family: "GameBoySmooth";
+  src: url("/menu/fonts/GameBoy.woff2") format("woff2");
+  font-display: block;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; display: grid; grid-template-columns: 320px 1fr; height: 100vh;
+  font: 12px/1.5 ui-monospace, Menlo, monospace; background: #16151a; color: #ddd;
+}
+#panel { overflow-y: auto; padding: 14px 16px 40px; border-right: 1px solid #2c2b33; }
+h1 { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: #8f8b9c; margin: 0 0 14px; }
+.row { margin-bottom: 11px; }
+.row label { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 3px; color: #b9b4c6; }
+.row output { color: #ffd166; }
+input[type=range] { width: 100%; accent-color: #e5177f; }
+select, button { width: 100%; padding: 7px; background: #232229; color: #eee;
+  border: 1px solid #38363f; font: inherit; cursor: pointer; }
+button { margin-top: 8px; background: #e5177f; border-color: #e5177f; color: #fff; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; }
+hr { border: none; border-top: 1px solid #2c2b33; margin: 16px 0; }
+#out { width: 100%; height: 190px; background: #0f0e13; color: #9fe8b0;
+  border: 1px solid #2c2b33; font: 11px/1.45 ui-monospace, monospace; padding: 8px; resize: vertical; }
+
+/* ---- the stage: identical to the real loading screen ---- */
+#stage { position: relative; overflow: hidden; background: #fdf4fb;
+  display: flex; align-items: center; justify-content: center; }
+.inner { display: flex; flex-direction: column; align-items: center; }
+.gb-word { position: relative; display: flex; font-family: "GameBoy","Trebuchet MS",sans-serif;
+  font-size: clamp(2.2rem, 9vw, 5rem); line-height: 1; color: #2b2fd6;
+  letter-spacing: calc(var(--track) * 0.01em); }
+.gb-word.smooth { font-family: "GameBoySmooth","Trebuchet MS",sans-serif; }
+.gb-word span {
+  display: inline-block;
+  --peak: calc(var(--peak0) * -1vh - var(--i) * var(--ramp) * 1vh);
+  --h0: calc(var(--huelead) * 1deg + var(--i) * var(--huestep) * 1deg);
+  text-shadow:
+    calc(var(--bold) * 1px) 0 0 currentColor,
+    0 calc(var(--bold) * 1px) 0 currentColor,
+    calc(var(--bold) * 1px) calc(var(--bold) * 1px) 0 currentColor;
+  animation: wave calc(var(--fly) * 1s) var(--ease) both,
+             hue calc(var(--fly) * 1s) linear both;
+  animation-delay: calc(var(--start) * 1s + var(--i) * var(--step) * 1s),
+                   calc(var(--start) * 1s + var(--i) * var(--step) * 1s);
+}
+@keyframes wave {
+  from { opacity: 0; transform: translateY(calc(var(--fromy) * 1vh)) scale(var(--fromscale)); }
+  /* fade window and crest are injected as percentages at runtime */
+}
+.gb-sub { position: absolute; left: 0; right: 0; bottom: 9vh; text-align: center;
+  font-family: "Pix32 Cond","Futura Condensed","Arial Narrow",sans-serif;
+  font-size: clamp(.8rem,2.6vw,1.15rem); letter-spacing: .3em; text-indent: .3em;
+  color: #ec1c8c; }
+/* Not a glow — just a lighter circle of the word showing through a soft
+   travelling window. The pink copy sits exactly over the real letters and is
+   masked to an ellipse that crosses once. */
+.gb-word::after {
+  content: "TOEFULINA"; position: absolute; left: 0; top: 0; white-space: pre;
+  letter-spacing: inherit; color: #ff6fe0; pointer-events: none;
+  text-shadow: calc(var(--bold) * 1px) 0 0 #ff6fe0, 0 calc(var(--bold) * 1px) 0 #ff6fe0,
+               calc(var(--bold) * 1px) calc(var(--bold) * 1px) 0 #ff6fe0;
+  -webkit-mask-image: radial-gradient(ellipse 50% 160% at 50% 50%, #000 0%, rgba(0,0,0,.55) 42%, transparent 74%);
+  mask-image: radial-gradient(ellipse 50% 160% at 50% 50%, #000 0%, rgba(0,0,0,.55) 42%, transparent 74%);
+  -webkit-mask-size: calc(var(--orbsize) * 1%) 100%; mask-size: calc(var(--orbsize) * 1%) 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  animation: orb calc(var(--orbdur) * 1s) ease-in-out both;
+  animation-delay: calc(var(--start) * 1s + 8 * var(--step) * 1s + var(--fly) * 1s + var(--orbwait) * 1s);
+}
+@keyframes orb {
+  from { visibility: hidden; -webkit-mask-position: -70% 50%; mask-position: -70% 50% }
+  1%   { visibility: visible }
+  to   { visibility: visible; -webkit-mask-position: 170% 50%; mask-position: 170% 50% } }
+
+@keyframes hue {
+  from { filter: hue-rotate(var(--h0)) saturate(var(--sat)) }
+  to   { filter: hue-rotate(calc(var(--hueend) * 1deg)) saturate(1) } }
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <h1>Boot tuner</h1>
+  <div id="controls"></div>
+  <div id="warn" style="display:none;background:#5a1020;border:1px solid #a32040;padding:7px;margin:8px 0;color:#ffc9d4">
+    lead + 8 x step is above the end angle — the last letters will spin
+    backwards. Lower the step, or raise the end.
+  </div>
+  <hr />
+  <button id="replay">Replay ⏎</button>
+  <div class="row" style="margin-top:10px">
+    <label><span>slow motion</span><output id="o-slowmo">1x</output></label>
+    <input type="range" id="r-slowmo" min="1" max="4" step="0.1" value="1">
+  </div>
+  <div style="color:#6f6a7c;font-size:11px;margin-top:-4px">preview only — never shipped</div>
+  <hr />
+  <div id="turns" style="color:#ffd166;margin-bottom:8px"></div>
+  <h1>Paste this back to me</h1>
+  <textarea id="out" readonly></textarea>
+</div>
+
+<div id="stage">
+  <div class="inner">
+    <div class="gb-word" id="word"></div>
+    <div class="gb-sub">PORTFOLIO 2026</div>
+  </div>
+</div>
+
+<script>
+const P = [
+  ["start",   "2026 alone before letters", 0,   1.5, 0.35, 0.01, "s"],
+  ["step",    "stagger between letters",   0,   0.4, 0.07, 0.005,"s"],
+  ["fly",     "one letter's flight",       0.2, 2.5, 0.8,  0.02, "s"],
+  ["fromy",   "starts this far below",     0,   90,  52,   1,    "vh"],
+  ["fromx",   "starts this far LEFT",      -60, 20,  -13,  1,    "vw"],
+  ["fromscale","starts this many x size",  0.5, 6,   2.2,  0.1,  "x"],
+  ["fadein",  "fades in at",               0,   90,  40,   1,    "%"],
+  ["fadefull","fully visible by",          1,   95,  52,   1,    "%"],
+  ["crest",   "crests at",                 20,  95,  60,   1,    "%"],
+  ["peak0",   "first letter crests",       0,   40,  1,    0.5,  "vh above"],
+  ["ramp",    "each next letter, extra",   0,   10,  3.7,  0.1,  "vh"],
+  ["crestx",  "swings this far RIGHT",     -20, 60,  9,    1,    "vw"],
+  ["crestscale","size at the crest (front)",0.5, 6,   3.2,  0.05, "x"],
+  ["huelead", "1st letter enters wheel at", 0,   360, 40,   5,    "deg"],
+  ["huestep", "each next letter, further",  0,   180, 25,   5,    "deg"],
+  ["hueend",  "all finish at",             360, 1440,360,  360,  "deg"],
+  ["sat",     "colour while flying",       0,   1.4, 0.65, 0.05, "x"],
+  ["bold",    "boldness (dilate)",         0,   4,   1,    0.5,  "px"],
+  ["track",   "tracking",                  -12, 6,   -1.5, 0.5,  "/100em"],
+  ["orbsize", "orb width",                 15,  120, 55,   5,    "%"],
+  ["orbdur",  "orb crosses in",            0.3, 3,   1.1,  0.05, "s"],
+  ["orbwait", "orb waits after landing",   0,   2,   0.25, 0.05, "s"],
+];
+const EASES = {
+  "glide (even, soft finish)": "cubic-bezier(0.3, 0.15, 0.3, 1)",
+  "ease-out (fast then slow)": "cubic-bezier(0.16, 0.72, 0.24, 1)",
+  "linear":                    "linear",
+  "ease-in-out":               "cubic-bezier(0.45, 0.05, 0.55, 0.95)",
+  "gentle":                    "cubic-bezier(0.4, 0.25, 0.25, 1)",
+  "snappy":                    "cubic-bezier(0.05, 0.8, 0.2, 1)",
+};
+
+const word = document.getElementById("word");
+"TOEFULINA".split("").forEach((c,i) => {
+  const s = document.createElement("span");
+  s.textContent = c; s.style.setProperty("--i", i); word.appendChild(s);
+});
+
+const state = {};
+const box = document.getElementById("controls");
+for (const [k, lbl, min, max, val, stp, unit] of P) {
+  state[k] = val;
+  const d = document.createElement("div"); d.className = "row";
+  d.innerHTML = `<label><span>${lbl}</span><output id="o-${k}">${val}${unit}</output></label>
+                 <input type="range" id="r-${k}" min="${min}" max="${max}" step="${stp}" value="${val}">`;
+  box.appendChild(d);
+  d.querySelector("input").addEventListener("input", e => {
+    state[k] = parseFloat(e.target.value);
+    document.getElementById("o-"+k).textContent = state[k] + unit;
+    apply(true);
+  });
+}
+// easing + font pickers
+const extra = document.createElement("div");
+extra.innerHTML = `<div class="row"><label><span>easing</span></label>
+  <select id="ease">${Object.keys(EASES).map(n=>`<option>${n}</option>`).join("")}</select></div>
+  <div class="row"><label><span>font</span></label>
+  <select id="font"><option>pixelated</option><option>smooth</option></select></div>`;
+box.appendChild(extra);
+document.getElementById("ease").addEventListener("change", () => apply(true));
+document.getElementById("font").addEventListener("change", e => {
+  word.classList.toggle("smooth", e.target.value === "smooth"); apply(true);
+});
+
+// Stretches every duration for viewing only. The values written out below
+// are always the real ones, so you can tune at 2x and paste numbers that run
+// at full speed on the site.
+let slowmo = 1;
+document.getElementById("r-slowmo").addEventListener("input", e => {
+  slowmo = parseFloat(e.target.value);
+  document.getElementById("o-slowmo").textContent = slowmo + "x";
+  apply(true);
+});
+
+// The keyframes carry runtime percentages, so they're rebuilt rather than
+// tweaked — a stylesheet rule is cheaper to replace whole than to patch.
+const sheet = document.createElement("style");
+document.head.appendChild(sheet);
+
+function apply(replay) {
+  const s = state;
+  const ease = EASES[document.getElementById("ease").value];
+  const mult = slowmo;
+  const r = document.documentElement.style;
+  r.setProperty("--start", s.start * mult);
+  r.setProperty("--step",  s.step  * mult);
+  r.setProperty("--fly",   s.fly   * mult);
+  r.setProperty("--fromy", s.fromy);
+  r.setProperty("--fromscale", s.fromscale);
+  r.setProperty("--peak0", s.peak0);
+  r.setProperty("--ramp",  s.ramp);
+  r.setProperty("--huelead", s.huelead);
+  r.setProperty("--huestep", s.huestep);
+  r.setProperty("--hueend",  s.hueend);
+  r.setProperty("--sat",     s.sat);
+  r.setProperty("--bold",  s.bold);
+  r.setProperty("--track", s.track);
+  r.setProperty("--orbsize", s.orbsize);
+  r.setProperty("--orbdur",  s.orbdur * mult);
+  r.setProperty("--orbwait", s.orbwait * mult);
+  r.setProperty("--ease",  ease);
+
+  const fadeIn = Math.min(s.fadein, s.fadefull - 1);
+  sheet.textContent = `@keyframes wave {
+  from { opacity: 0; transform: translate(${s.fromx}vw, ${s.fromy}vh) scale(${s.fromscale}); }
+  ${fadeIn}% { opacity: 0; }
+  ${s.fadefull}% { opacity: 1; }
+  ${s.crest}% { transform: translate(${s.crestx}vw, var(--peak)) scale(${s.crestscale}); }
+  to { opacity: 1; transform: translate(0, 0) scale(1); }
+}`;
+  document.getElementById("out").value =
+`--gb-start: ${s.start}s;
+--gb-step: ${s.step}s;
+--gb-fly: ${s.fly}s;
+easing: ${ease}
+font: ${document.getElementById("font").value}
+
+@keyframes gb-wave {
+  from { opacity: 0; transform: translate(${s.fromx}vw, ${s.fromy}vh) scale(${s.fromscale}); }
+  ${fadeIn}% { opacity: 0; }
+  ${s.fadefull}% { opacity: 1; }
+  ${s.crest}% { transform: translate(${s.crestx}vw, var(--peak)) scale(${s.crestscale}); }
+  to { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+--peak: calc(-${s.peak0}vh - var(--i) * ${s.ramp}vh);
+--gb-hue-lead: ${s.huelead}deg;
+--gb-hue-step: ${s.huestep}deg;
+--gb-hue-end: ${s.hueend}deg;\n--gb-sat: ${s.sat};
+--gb-bold: ${s.bold}px;
+--gb-track: ${(s.track*0.01).toFixed(3)}em;
+--gb-orb-size: ${s.orbsize}%;
+--gb-orb-dur: ${s.orbdur}s;
+--gb-orb-wait: ${s.orbwait}s;`;
+
+  const over = s.huelead + 8 * s.huestep > s.hueend;
+  document.getElementById("warn").style.display = over ? "block" : "none";
+  // How far round the first and last letters actually go — the number that
+  // decides whether it reads as one pass or three.
+  document.getElementById("turns").textContent =
+    `letter 1: ${((s.hueend - s.huelead)/360).toFixed(1)} turns  ·  ` +
+    `letter 9: ${((s.hueend - s.huelead - 8*s.huestep)/360).toFixed(1)} turns`;
+  if (replay) restart();
+}
+
+function restart() {
+  const els = [...word.querySelectorAll("span")];
+  els.forEach(e => e.style.animation = "none");
+  word.style.setProperty("--replay", "0");
+  void word.offsetWidth;
+  els.forEach(e => e.style.animation = "");
+  // ::after can't be reached from script, so its animation is restarted by
+  // taking the class off and putting it back.
+  word.classList.remove("gb-word"); void word.offsetWidth; word.classList.add("gb-word");
+}
+document.getElementById("replay").addEventListener("click", restart);
+addEventListener("keydown", e => { if (e.key === "Enter") restart(); });
+
+apply(true);
+// Loops so you can watch it over and over — the gap grows with the slow-mo
+// factor, or a stretched run would get cut off by the next restart.
+let loop = null;
+function reloop() {
+  clearInterval(loop);
+  const span = (state.start + 8 * state.step + state.fly + state.orbwait + state.orbdur) * slowmo * 1000 + 1200;
+  loop = setInterval(restart, span);
+}
+const _apply = apply;
+apply = (r) => { _apply(r); reloop(); };
+reloop();
+</script>
+</body>
+</html>
