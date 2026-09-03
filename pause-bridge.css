@@ -147,8 +147,22 @@ body.paused #pause-open-btn {
 #pause-menu-root.menu-inverted #app,
 #pause-menu-root.menu-inverted #app canvas,
 #pause-menu-root.menu-inverted #app .portfolio-media,
-#pause-menu-root.menu-inverted #app .about-photo,
 #pause-menu-root.menu-inverted #app .gallery-thumb img {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* ---- about me: authored colours, not flipped ------------------------------
+   Every other menu screen was designed against the inversion — its colours are
+   authored backwards on purpose. The About page was not: it is a port of the
+   night-market /about layout, which is cream-on-near-black as written, and
+   re-authoring a page of body copy backwards would make it unreadable to edit.
+
+   So it takes the same escape hatch the 3D canvases and the portfolio media
+   already use — a second identical filter, which is its own inverse. Inside
+   .about-scroll everything lands on exactly the colours in menu.css, the
+   photos included, so they need no exception of their own. Scoped to the
+   scroller only, so the top nav keeps matching every other screen. */
+#pause-menu-root.menu-inverted #app .about-scroll {
   filter: invert(1) hue-rotate(180deg);
 }
 

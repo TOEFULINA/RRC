@@ -16,9 +16,10 @@ export const about = {
     "Contact me for any business inquiries! Price and structure are negotiable per client. :)",
   ],
 
+  // Not rendered — the mark below sits in the frame instead. File is still in
+  // /menu/about if the portrait is ever wanted back.
   photo: "/menu/about/profile.png",
-  // Not rendered — the header reads better without a mark above it. The file
-  // is still in /menu/about if it is ever wanted back.
+  // Shown in the frame at the top of the left rail.
   logo: "/menu/about/logo-px.png",
   location: "Manhattan, NY",
 

@@ -97,19 +97,12 @@ export function renderMapView(container) {
     `
     <div class="about-scroll">
       <div class="about-content">
-        <div class="about-header-row">
-          <div class="about-photo-frame">
-            <img class="about-photo" src="${esc(about.photo)}" alt="" />
-          </div>
-          <div class="about-header">
-            <h1 class="rune">${esc(about.heading)}</h1>
-            <h2 class="rune">${esc(about.name)}</h2>
-            ${about.intro.map((t) => `<p>${esc(t)}</p>`).join("")}
-          </div>
-        </div>
-
         <div class="about-columns">
           <div class="about-col-left">
+            <div class="about-photo-frame">
+              <img class="about-photo about-mark" src="${esc(about.logo)}" alt="" />
+            </div>
+
             <ul class="about-contact-list">
               <li class="about-contact-place">${icon("pin")}<span>${esc(about.location)}</span></li>
               ${links}
@@ -127,6 +120,11 @@ export function renderMapView(container) {
           </div>
 
           <div class="about-col-right">
+            <div class="about-header">
+              <h1 class="rune">${esc(about.heading)}</h1>
+              <h2 class="rune">${esc(about.name)}</h2>
+              ${about.intro.map((t) => `<p>${esc(t)}</p>`).join("")}
+            </div>
             ${about.boxes.map(renderBox).join("")}
           </div>
         </div>

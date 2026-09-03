@@ -235,6 +235,12 @@ label[for],
      percentage of this box, so it can't drift if the box's own sizing
      ever changes. */
   --gap: clamp(2.25rem, 5vw, 4.5rem);
+  /* Vertical gap is its own variable because the compass box is 2.16x wider
+     than it is tall (compass-rose.png's own proportions). One shared gap is a
+     quarter of the star's width but well over half its height, so on a phone
+     SKILLS and ABOUT float away from their tips while PORTFOLIO and ITEMS sit
+     right up against theirs. Same value on desktop, overridden below. */
+  --gap-y: var(--gap);
 }
 
 .compass-art {
@@ -287,12 +293,12 @@ label[for],
 .compass-point.top {
   top: 0;
   left: 50%;
-  transform: translate(-50%, calc(-100% - var(--gap)));
+  transform: translate(-50%, calc(-100% - var(--gap-y)));
 }
 .compass-point.bottom {
   bottom: 0;
   left: 50%;
-  transform: translate(-50%, calc(100% + var(--gap)));
+  transform: translate(-50%, calc(100% + var(--gap-y)));
 }
 .compass-point.left {
   left: 0;
@@ -1132,11 +1138,10 @@ label[for],
   /* Bottom padding clears the fixed nav bar — without it the last update card
      and the footer sit underneath it. */
   padding: 1.4rem clamp(1rem, 5vw, 4rem) 7rem;
-  /* Deliberately no backdrop: the paused room reads straight through the page,
-     which is the whole reason this screen looks like it belongs to the room
-     rather than sitting on top of it. Everything here is authored the same way
-     the rest of the menu is — cream ink and cream hairlines, flipped to dark by
-     #app's inversion — so it lands as dark type over the lit room. */
+  /* This page is a wall of small type and the lit room behind it wins every
+     legibility contest. Near-opaque, but not sealed — the room still shows
+     through, so it still reads as something you opened mid-pause. */
+  background: rgba(8, 8, 10, 0.9);
 }
 .about-content {
   max-width: 1180px;
@@ -1145,16 +1150,10 @@ label[for],
   color: var(--ink);
 }
 
-/* Photo left, name and intro right, on the same 300px/1fr split the columns
-   below use — so the portrait sits directly above the contact list rather than
-   floating on its own grid. */
-.about-header-row {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: clamp(1.2rem, 4vw, 3rem);
-  align-items: end;
-}
+/* The portrait opens the left rail, so the links sit directly under it at any
+   width. See the note in mapView.js for why it isn't a header row any more. */
 .about-photo-frame {
+  margin-bottom: 1.4rem;
   width: 100%;
   aspect-ratio: 1;
   border: 2px solid var(--ink);
@@ -1166,6 +1165,14 @@ label[for],
   height: 100%;
   object-fit: cover;
   image-rendering: pixelated;
+}
+/* The mark, not a photo: it is line art on transparent, so it is fitted inside
+   the frame with air around it rather than cropped to fill one. It sits inside
+   .about-scroll, which is filtered back to its authored colours, so the white
+   in the file is the white you see. */
+.about-mark {
+  object-fit: contain;
+  padding: 13%;
 }
 
 .about-header h1 {
@@ -1186,17 +1193,19 @@ label[for],
 }
 .about-header p {
   margin: 0 0 0.6rem;
-  max-width: 62ch;
+  max-width: var(--about-measure);
   font-size: 0.95rem;
   line-height: 1.55;
 }
 
 .about-columns {
+  /* The right column's measure. Intro copy and update cards share it so their
+     right edges line up instead of the text stopping short of the boxes. */
+  --about-measure: 660px;
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: clamp(1.2rem, 4vw, 3rem);
   align-items: start;
-  margin-top: 2rem;
 }
 
 .about-contact-list {
@@ -1271,7 +1280,7 @@ label[for],
   background: var(--panel);
   padding: 1.1rem 1.3rem;
   margin-bottom: 1.1rem;
-  max-width: 660px;
+  max-width: var(--about-measure);
 }
 .about-box h3 {
   margin: 0;
@@ -1338,12 +1347,8 @@ label[for],
    pushes the first update card two screens down. The fixed 300px rail becomes
    proportional instead. */
 @media (max-width: 900px) {
-  .about-header-row,
   .about-columns { grid-template-columns: 38% 1fr; gap: 0.9rem; }
-  /* The intro runs several times taller than the portrait at this width, so
-     bottom-aligning the two leaves the photo stranded at the end of a column
-     of empty space. Top-aligned, they start together. */
-  .about-header-row { align-items: start; }
+  .about-photo-frame { margin-bottom: 0.9rem; }
   .about-contact-list { font-size: 0.8rem; gap: 0.45rem; }
   .about-icon { width: 13px; height: 13px; }
   .about-box { padding: 0.8rem 0.9rem; }
@@ -1850,6 +1855,12 @@ label[for],
 
    Left point only, mobile only. Everything else is untouched. */
 @media (max-width: 860px) {
+  /* The star is only ~83px tall on a 390px phone. Zeroing the vertical gap
+     still leaves the labels a comfortable distance clear, because each button
+     carries 0.75em of its own padding (kept — it is the tap target), so SKILLS
+     and ABOUT land about 14px off their tips instead of 49. */
+  #pause-menu-root .compass { --gap-y: 0rem; }
+
   /* Qualified with the id on purpose. The rest of this file sits inside
      @scope (#pause-menu-root), and scope proximity outranks source order on a
      specificity tie — so an unscoped `.compass-point.left` down here loses to
