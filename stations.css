@@ -1,0 +1,237 @@
+/* ---------------------------------------------------------------------------
+   Station panels — the flat 2D layer that takes over when you click the
+   speaker or the desk.
+
+   Everything here sits on top of a still image of the room, not the live
+   canvas, so none of it is competing with a render loop. That is what makes it
+   cheap enough to leave open on a phone.
+   --------------------------------------------------------------------------- */
+
+.station-root {
+  position: fixed;
+  inset: 0;
+  z-index: 40;                 /* under the pause menu (50), over the canvas */
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+.station-root.is-open { opacity: 1; }
+.station-root[hidden] { display: none !important; }
+
+/* the frozen frame */
+.station-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Matches the room's own look rather than resampling it smooth. */
+  image-rendering: pixelated;
+}
+
+.station-scrim {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(3vh, env(safe-area-inset-top, 0px)) 4vw max(3vh, env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(ellipse at center, rgba(8, 6, 12, 0.45), rgba(8, 6, 12, 0.78));
+  transition: background 0.28s ease;
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+}
+
+.station-close {
+  position: absolute;
+  top: max(1.1rem, env(safe-area-inset-top, 0px));
+  right: 1.1rem;
+  z-index: 3;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid rgba(238, 231, 214, 0.35);
+  border-radius: 50%;
+  background: rgba(12, 10, 16, 0.55);
+  color: #eee7d6;
+  font: 1.35rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.station-close:hover { background: rgba(40, 34, 50, 0.8); border-color: rgba(238, 231, 214, 0.7); }
+
+/* Only the panel for the open station is in the layout. */
+.station-root .ipod,
+.station-root .desk-board { display: none; }
+.station-root[data-station="speaker"] .ipod { display: grid; }
+.station-root[data-station="desk"] .desk-board { display: block; }
+
+/* ---------------------------------------------------------------- the player
+   Drawn, not modelled: a flat panel that drops in from above the frame, which
+   is the same beat as a device descending into shot without the cost of one. */
+.ipod {
+  position: relative;
+  z-index: 2;
+  grid-template-rows: 1fr auto;
+  width: min(92vw, 23rem);
+  max-height: 88vh;
+  padding: 0.9rem 0.9rem 0.4rem;
+  border-radius: 1.6rem;
+  background: linear-gradient(#f2f0ea, #d8d5cd);
+  box-shadow: 0 1.4rem 3rem rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transform: translateY(-130%);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.32, 1);
+}
+.station-root.is-open .ipod { transform: translateY(0); }
+
+.ipod-screen {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: 0.75rem;
+  border-radius: 0.7rem;
+  background: #12131a;
+  color: #e8e6df;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.ipod-art {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 0.35rem;
+  background: #24262f;
+}
+
+.ipod-meta { min-width: 0; }
+.ipod-title {
+  font: 1.05rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ipod-artist {
+  margin-top: 0.15rem;
+  font: 0.78rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
+  color: #9b98a8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ipod-bar {
+  height: 0.4rem;
+  border-radius: 0.2rem;
+  background: #2b2d38;
+  cursor: pointer;
+}
+.ipod-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #ec1c8c;
+  transition: width 0.15s linear;
+}
+
+.ipod-list {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;      /* don't scroll the page behind it */
+  -webkit-overflow-scrolling: touch;
+  list-style: none;
+  min-height: 4rem;
+}
+.ipod-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.4rem 0.3rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font: 0.76rem/1.25 var(--ui-font, "Pix32 Cond", sans-serif);
+  cursor: pointer;
+}
+.ipod-row:hover { background: rgba(255, 255, 255, 0.05); }
+.ipod-row.is-current { color: #ec1c8c; }
+.ipod-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ipod-row-artist { flex: 0 0 auto; color: #82808f; }
+.ipod-row.is-current .ipod-row-artist { color: #b3477f; }
+
+.ipod-wheel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 0 0.5rem;
+}
+.ipod-btn {
+  min-width: 3.2rem;
+  padding: 0.55rem 0.7rem;
+  border: none;
+  border-radius: 999px;
+  background: #c9c6bd;
+  color: #2b2b33;
+  font: 0.8rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+.ipod-btn:hover { background: #b9b6ac; }
+.ipod-btn:active { transform: translateY(1px); }
+.ipod-btn.play { min-width: 4.4rem; background: #2b2b33; color: #f0eee7; }
+.ipod-btn.play:hover { background: #3a3a45; }
+
+/* Under the loft the room is already dim, so the desk gets a gentler scrim —
+   the same wash there reads as near-black. */
+.station-root[data-station="desk"] .station-scrim {
+  background: radial-gradient(ellipse at center, rgba(10, 8, 14, 0.28), rgba(10, 8, 14, 0.6));
+}
+.station-root[data-station="desk"] .station-still { filter: brightness(1.35); }
+
+/* ---------------------------------------------------------------- the desk */
+.desk-board {
+  position: relative;
+  z-index: 2;
+  width: min(96vw, 60rem);
+  height: min(84vh, 42rem);
+}
+
+.desk-piece {
+  position: absolute;
+  width: clamp(6rem, 20vw, 11rem);
+  translate: -50% -50%;
+  rotate: var(--tilt, 0deg);
+  border: 0.4rem solid #fbf9f4;
+  border-radius: 2px;
+  box-shadow: 0 0.5rem 1.2rem rgba(0, 0, 0, 0.45);
+  cursor: grab;
+  touch-action: none;                /* the drag is ours, not the browser's */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  transition: box-shadow 0.15s ease, scale 0.15s ease;
+}
+.desk-piece.is-held {
+  cursor: grabbing;
+  scale: 1.04;
+  box-shadow: 0 1.1rem 2.2rem rgba(0, 0, 0, 0.6);
+}
+
+.desk-hint {
+  position: absolute;
+  left: 50%;
+  bottom: -1.6rem;
+  translate: -50% 0;
+  color: rgba(238, 231, 214, 0.65);
+  font: 0.8rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: opacity 0.4s ease;
+}
+.desk-hint.is-gone { opacity: 0; }
+
+/* A hovered station gets the pointer cue, same as the records. */
+#scene.hovering-station { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ipod { transition: none; }
+  .station-root { transition: none; }
+}

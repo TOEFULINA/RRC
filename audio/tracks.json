@@ -1,0 +1,121 @@
+[
+  {
+    "id": "8-feet-tall",
+    "title": "8 Feet Tall",
+    "artist": "ERISTHEPLANET & Rico Nasty",
+    "src": "audio/8-feet-tall.m4a",
+    "cover": "images/player/8-feet-tall.webp"
+  },
+  {
+    "id": "burning-rubber",
+    "title": "Burning Rubber",
+    "artist": "Jordan Ward & Joony",
+    "src": "audio/burning-rubber.m4a",
+    "cover": "images/player/burning-rubber.webp"
+  },
+  {
+    "id": "classy",
+    "title": "Classy",
+    "artist": "Joony & Tony Shhnow",
+    "src": "audio/classy.m4a",
+    "cover": "images/player/classy.webp"
+  },
+  {
+    "id": "geezer",
+    "title": "Geezer",
+    "artist": "ERISTHEPLANET",
+    "src": "audio/geezer.m4a",
+    "cover": "images/player/geezer.webp"
+  },
+  {
+    "id": "idiot",
+    "title": "Idiot",
+    "artist": "Estelle Allen",
+    "src": "audio/idiot.m4a",
+    "cover": "images/player/idiot.webp"
+  },
+  {
+    "id": "jjk",
+    "title": "JJK",
+    "artist": "Yuki Chiba & MGK",
+    "src": "audio/jjk.m4a",
+    "cover": "images/player/jjk.webp"
+  },
+  {
+    "id": "need-it",
+    "title": "Need It",
+    "artist": "Joony",
+    "src": "audio/need-it.m4a",
+    "cover": "images/player/need-it.webp"
+  },
+  {
+    "id": "no-chill",
+    "title": "No Chill",
+    "artist": "Joony",
+    "src": "audio/no-chill.m4a",
+    "cover": "images/player/no-chill.webp"
+  },
+  {
+    "id": "oooooo",
+    "title": "Oooooo",
+    "artist": "Joony",
+    "src": "audio/oooooo.m4a",
+    "cover": "images/player/oooooo.webp"
+  },
+  {
+    "id": "pimpin",
+    "title": "Pimpin",
+    "artist": "Joony, Larry June & Isaiah Falls",
+    "src": "audio/pimpin.m4a",
+    "cover": "images/player/pimpin.webp"
+  },
+  {
+    "id": "put-up",
+    "title": "Put Up",
+    "artist": "Anycia & Quavo",
+    "src": "audio/put-up.m4a",
+    "cover": "images/player/put-up.webp"
+  },
+  {
+    "id": "smoke-you-out",
+    "title": "Smoke You Out",
+    "artist": "Anycia & Kalan.FrFr",
+    "src": "audio/smoke-you-out.m4a",
+    "cover": "images/player/smoke-you-out.webp"
+  },
+  {
+    "id": "tell-me-now",
+    "title": "Tell Me Now",
+    "artist": "Dess Dior & Belly Gang Kushington",
+    "src": "audio/tell-me-now.m4a",
+    "cover": "images/player/tell-me-now.webp"
+  },
+  {
+    "id": "wassup",
+    "title": "Wassup",
+    "artist": "KEY! & DRAM",
+    "src": "audio/wassup.m4a",
+    "cover": "images/player/wassup.webp"
+  },
+  {
+    "id": "we-got-that",
+    "title": "We Got That",
+    "artist": "Black Moss",
+    "src": "audio/we-got-that.m4a",
+    "cover": "images/player/we-got-that.webp"
+  },
+  {
+    "id": "zendaya",
+    "title": "Zendaya",
+    "artist": "Chris Patrick",
+    "src": "audio/zendaya.m4a",
+    "cover": "images/player/zendaya.webp"
+  },
+  {
+    "id": "zombie",
+    "title": "Zombie",
+    "artist": "Estelle Allen",
+    "src": "audio/zombie.m4a",
+    "cover": "images/player/zombie.webp"
+  }
+]

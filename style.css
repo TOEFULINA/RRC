@@ -75,9 +75,17 @@ html, body {
   font-display: block;   /* one short line — better to wait than flash a fallback */
 }
 
-/* The byline sets in the same face the compass uses, so the loading screen and
-   the menu it hands off to are visibly the same typeface. Declared here because
-   menu.css isn't loaded until the pause menu mounts. */
+/* The byline's own face — the NES Mario type, which is a bitmap face to begin
+   with, so it needs no pixelating pass of its own. Subset to the letters and
+   digits the line actually uses. */
+@font-face {
+  font-family: "MarioNES";
+  src: url("/menu/fonts/MarioNES.woff2") format("woff2"),
+       url("/menu/fonts/MarioNES.woff") format("woff");
+  font-display: block;
+}
+
+/* Kept for the compass, which still sets in it. */
 @font-face {
   font-family: "Pix32 Cond";
   src: url("/menu/fonts/Pix32-Cond.woff2") format("woff2"),
@@ -304,8 +312,8 @@ html, body {
   left: 0;
   right: 0;
   bottom: max(9vh, env(safe-area-inset-bottom, 0px));
-  font-family: "Pix32 Cond", "Pix32", "Futura Condensed", "Arial Narrow", sans-serif;
-  font-size: clamp(0.8rem, 2.6vw, 1.15rem);
+  font-family: "MarioNES", "Pix32 Cond", "Futura Condensed", sans-serif;
+  font-size: clamp(0.78rem, 2.5vw, 1.1rem);
   letter-spacing: 0.3em;
   text-indent: 0.3em;   /* offsets the trailing letter-space, so it stays centred */
   color: #ec1c8c;

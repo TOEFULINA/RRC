@@ -35,6 +35,8 @@ import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-01d1";
 import { initRainAudio, toggleRainAudio } from "./rainAudio.js?v=2026-09-01d1";
 import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox,
          vinylNeighbour, vinylIndexOf, vinylCount } from "./vinyl.js?v=4";
+import { initStations, pickStation, openStation, closeStation, isStationOpen,
+         setStill } from "./stations.js?v=1";
 
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
@@ -509,6 +511,9 @@ canvas.addEventListener("pointermove", (e) => {
   if (SEAT_ENABLED && !pointerDownPos && !seated && !camTween && !isPauseMenuOpen() && e.pointerType !== "touch") {
     setSeatHover(pickSeat(e));
   }
+  if (!pointerDownPos && !camTween && !isPauseMenuOpen() && !isStationOpen() && e.pointerType !== "touch") {
+    canvas.classList.toggle("hovering-station", !!pickStation(e.clientX, e.clientY));
+  }
   if (!pointerDownPos || isPauseMenuOpen()) return;
   dragDistance += Math.abs(e.movementX) + Math.abs(e.movementY);
   // Touch expects the opposite convention: drag right and the ROOM follows
@@ -524,6 +529,8 @@ canvas.addEventListener("pointerup", (e) => {
   if (seated) { standUp(); return; }
   const record = pickVinyl(e.clientX, e.clientY);
   if (record) { focusVinyl(record); return; }
+  const station = pickStation(e.clientX, e.clientY);
+  if (station) { tryOpenStation(station); return; }
   if (pickSeat(e)) sitDown();
 });
 canvas.addEventListener("pointercancel", () => { pointerDownPos = null; });
@@ -789,6 +796,38 @@ function pickSeat(e) {
   return seatRay.intersectObjects(seatMeshes, false).length > 0;
 }
 
+// ---------------------------------------------------------------- stations
+// Clicking the speaker or the desk hands the screen to a flat 2D panel. While
+// one is open the render loop stops entirely and a still of the last frame
+// stands in for the room — see stations.js for why.
+let stationFrozen = false;
+
+function freezeToStill() {
+  renderer.render(scene, camera);
+  try {
+    setStill(canvas.toDataURL("image/jpeg", 0.86));
+  } catch (err) {
+    // A tainted canvas would only happen if a texture came from another
+    // origin; the panel still works, it just has no backdrop.
+    console.error("station: couldn't snapshot the canvas —", err);
+  }
+  stationFrozen = true;
+  pointerDownPos = null;
+  moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
+}
+
+function thawFromStill() {
+  stationFrozen = false;
+  clock.getDelta();   // swallow the paused time, or the first frame lurches
+}
+
+function tryOpenStation(id) {
+  if (focusedVinyl || seated || camTween || isStationOpen()) return false;
+  return openStation(id, BOUNDS, {
+    pos: camera.position.clone(), yaw: lookYaw, pitch: lookPitch, fov: camera.fov,
+  });
+}
+
 // ---------------------------------------------------------------- walking
 const MOVE_SPEED = 1.9;
 const moveKeys = { w: false, a: false, s: false, d: false };
@@ -866,7 +905,7 @@ function applyWalk(delta) {
 }
 
 function pressKey(k) {
-  if (isPauseMenuOpen()) return;
+  if (isPauseMenuOpen() || isStationOpen()) return;
   if (!(k in moveKeys)) return;
   // Trying to walk is the natural way to say "I'm done looking at this".
   if (focusedVinyl) { unfocusVinyl(); return; }
@@ -924,6 +963,7 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if (isStationOpen()) { closeStation(); return; }
   if (isPauseMenuOpen()) {
     if (getCurrentRoute() !== "home") navigate("home");
     else setPauseMenuOpen(false);
@@ -1090,6 +1130,10 @@ loader.load(
     // raycasts, which needs resolved world matrices.
     initVinyl(model, camera, canvas);
     const seats = initSeat(model);
+    const stations = initStations(model, camera, canvas, {
+      tween: startCamTween, freeze: freezeToStill, thaw: thawFromStill,
+    });
+    console.info(`stations: ${stations.join(", ") || "none"}.`);
     if (COLLISION_ENABLED) {
       const gridStats = buildCollisionGrid(model, CAMERA_EYE.y);
       console.info(`collision: ${gridStats.marked} of ${gridStats.cells} floor cells blocked, from ${gridStats.tris} triangles in the body band.`);
@@ -1143,7 +1187,7 @@ const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.1);
-  if (!isPauseMenuOpen()) {
+  if (!isPauseMenuOpen() && !stationFrozen) {
     // While a sit/stand tween is running it owns the camera outright.
     if (!updateCamTween(delta) && !seated && !focusedVinyl) applyWalk(delta);
     applyLookDelta(0, 0); // re-derive target from the new position
