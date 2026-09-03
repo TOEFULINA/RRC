@@ -168,6 +168,15 @@ export const items = [
     description: "Design work for Lonelystar! Limited release.",
   },
   {
+    ...placeholder("item-61", "Glo Gang Layered Tee", "Tops"),
+    stats: [
+      { label: "Year", value: "2025" },
+      { label: "Value", value: "—" },
+      { label: "Weight", value: "1" },
+    ],
+    description: "Description coming soon.",
+  },
+  {
     ...placeholder("item-51", "New Moon Raglan", "Tops"),
     model: "/menu/models/new-moon-raglan.glb",
     viewerStartAngle: { thetaDeg: 270.6, phiDeg: 99.4 },
@@ -182,12 +191,23 @@ export const items = [
   // Bottoms
   {
     ...placeholder("item-06", "Sticker Print Jorts", "Bottoms"),
+    model: "/menu/models/sticker-print-jorts.glb",
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "98" },
       { label: "Weight", value: "2" },
     ],
     description: "Designed by me for Bravest Studios!",
+  },
+  {
+    ...placeholder("item-60", "Sapphire Jorts", "Bottoms"),
+    model: "/menu/models/sapphire-jorts.glb",
+    stats: [
+      { label: "Year", value: "2024" },
+      { label: "Value", value: "—" },
+      { label: "Weight", value: "2" },
+    ],
+    description: "Description coming soon.",
   },
   {
     ...placeholder("item-07", "Black Illustrated Shorts", "Bottoms"),
@@ -429,6 +449,7 @@ export const items = [
   },
   {
     ...placeholder("item-21", "Kid Cudi x Bravest Foot Clog Box", "Packaging"),
+    model: "/menu/models/kid-cudi-clog-box.glb",
     stats: [
       { label: "Year", value: "2024" },
       { label: "Value", value: "—" },

@@ -1061,8 +1061,29 @@ draco.setDecoderPath("menu/draco/");
 const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
 
-loader.load(
-  MODEL_URL,
+// The boot animation and the model used to fight over the main thread. The
+// letters are drawn with a per-letter hue filter and a text-shadow dilation,
+// neither of which the compositor can run on its own — so while GLTFLoader was
+// parsing 20MB and uploading textures, the wave stalled halfway and you got
+// "TOE" and then, a beat later, "FULINA".
+//
+// Splitting fetch from parse fixes it without costing any time: the download
+// (which is the slow part, and happens off the main thread) starts
+// immediately and overlaps the animation, and the parse — the part that
+// blocks — waits until the letters have landed.
+const modelBytes = fetch(MODEL_URL)
+  .then((res) => {
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return res.arrayBuffer();
+  });
+
+Promise.all([modelBytes, bootAnimationDone()])
+  .then(([buf]) => new Promise((resolve, reject) => {
+    // Same path GLTFLoader.load() takes once it has the bytes; the base URL is
+    // the models folder so any external resource still resolves.
+    loader.parse(buf, "models/", resolve, reject);
+  }))
+  .then(
   (gltf) => {
     const model = gltf.scene;
     const cache = new Map();
@@ -1152,26 +1173,20 @@ loader.load(
     syncLookAnglesFromTarget();
     camera.lookAt(target);
 
-    // Room's ready, but don't yank the boot screen out from under the orb.
-    bootAnimationDone().then(() => {
-      loadingScreen?.classList.add("hidden");
+    // The animation already finished — parsing didn't start until it had.
+    loadingScreen?.classList.add("hidden");
 
-      document.getElementById("mobile-controls")?.classList.add("show");
-      document.getElementById("pause-open-btn")?.classList.add("show");
+    document.getElementById("mobile-controls")?.classList.add("show");
+    document.getElementById("pause-open-btn")?.classList.add("show");
 
-      setPauseMenuOpen(true);
-    });
+    setPauseMenuOpen(true);
 
     console.info(`room: ${unlit} unlit, ${lit} lit, ${mirrors} mirror, ${glass} glass, ${hidden} hidden.`);
-  },
-  // No progress readout by design — the spinning shoe is the loading state.
-  // The handler stays so the loader still has a progress callback attached.
-  undefined,
-  (err) => {
+  })
+  .catch((err) => {
     console.error("failed to load the room model —", err);
     if (loadingSub) loadingSub.textContent = "couldn't load the room";
-  }
-);
+  });
 
 // ---------------------------------------------------------------- resize
 window.addEventListener("resize", () => {
