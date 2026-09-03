@@ -50,12 +50,12 @@ dracoLoader.setDecoderPath("/menu/draco/");
 // Returns a `dispose()` function — call it when the viewer is removed
 // from the DOM (e.g. closing the item modal) to free GPU resources.
 
-// TEMP — an on-screen "θ 132.4°  φ 58.1°" readout in the corner of every
-// viewer, live-updating while you drag, so you can find and report an
-// exact starting angle instead of eyeballing "opposite-ish". Flip this
-// back to false (or delete the block below marked TEMP) once you've
-// picked your angles and don't need it anymore.
-const SHOW_ANGLE_READOUT = true;
+// An on-screen "θ 132.4°  φ 58.1°" readout in the corner of every viewer,
+// live-updating while you drag, so an exact starting angle can be read off
+// instead of eyeballed. It is a tool, not a feature — so it appears only when
+// the site is being served locally, and never on the deployed one.
+const SHOW_ANGLE_READOUT = /^(localhost|127\.0\.0\.1|\[::1\]|.*\.local)$/i
+  .test(location.hostname);
 
 // `animationRange` (optional) — { startFrame, endFrame, fps } — plays only
 // this slice of the model's baked animation instead of the whole clip.

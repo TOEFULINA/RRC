@@ -323,7 +323,7 @@ html, body {
   font-size: clamp(0.78rem, 2.5vw, 1.1rem);
   letter-spacing: 0.3em;
   text-indent: 0.3em;   /* offsets the trailing letter-space, so it stays centred */
-  color: #ec1c8c;
+  color: #16130f;
 }
 
 @media (prefers-reduced-motion: reduce) {

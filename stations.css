@@ -76,7 +76,7 @@
   /* How far down the resting position sits, so the nano's base lands in the
      speaker's own dock slot rather than floating above it. Tune this one
      number if the seat drifts. */
-  --ipod-seat: 2.3rem;
+  --ipod-seat: 3.05rem;
   transform: translateY(-140%);
 }
 /* Comes down out of frame, tips level on the way, drops the last few
@@ -115,6 +115,20 @@
     0 1.2rem 2.4rem rgba(0, 0, 0, 0.6);
 }
 /* The chamfer round the face, which is what makes the metal read as metal. */
+/* A dark band across the foot of the body. The real dock slot in the scene is
+   black, so this gives the aluminium something to disappear into instead of
+   ending on a hard red edge above it. */
+.ipod::after {
+  content: "";
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: 0;
+  height: 0.85rem;
+  border-radius: 0 0 0.8rem 0.8rem;
+  background: linear-gradient(rgba(10, 10, 12, 0) 0%, rgba(12, 12, 15, 0.72) 45%, #0c0c0f 100%);
+  pointer-events: none;
+}
 .ipod::before {
   content: "";
   position: absolute;
@@ -146,8 +160,9 @@
   min-height: 0;
   padding: 0.3rem 0.35rem 0.32rem;
   border-radius: 0.28rem;
-  background: #0e0f14;
-  color: #e8e6df;
+  /* The gen 3 UI is light, not dark — white panel, dark type. */
+  background: #ffffff;
+  color: #16181d;
   /* glass sunk into the aluminium */
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.9),
@@ -189,11 +204,11 @@
 
 .ipod-art {
   grid-area: art;
-  width: 4.3rem;
+  width: 5.6rem;
   aspect-ratio: 1;
   object-fit: cover;
-  align-self: end;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  align-self: center;
+  border: 1px solid rgba(0, 0, 0, 0.18);
 }
 
 .ipod-meta {
@@ -212,15 +227,16 @@
 .ipod-album {
   margin-top: 0.06rem;
   font: 0.52rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
-  color: #b7b4c2;
+  color: #4a4d55;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ipod-album { color: #8d8a99; }
+.ipod-album { color: #74777f; }
+.ipod-album:empty { display: none; }
 .ipod-count {
   margin-top: 0.22rem;
-  color: #8d8a99;
+  color: #74777f;
   font: 0.5rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
 }
 
@@ -232,15 +248,15 @@
 }
 .ipod-time {
   flex: 0 0 auto;
-  color: #b7b4c2;
+  color: #4a4d55;
   font: 0.46rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
 }
 .ipod-bar {
   flex: 1 1 auto;
   height: 0.26rem;
   border-radius: 0.13rem;
-  background: #33353f;
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+  background: #d8dade;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.22);
   cursor: pointer;
 }
 .ipod-fill {
@@ -316,23 +332,27 @@
   z-index: 2;
   width: min(96vw, 60rem);
   height: min(84vh, 42rem);
-  /* The still is shot from an eye 0.40m above the desk and 0.54m back, so the
-     view looks down on it at about 37 degrees. Laying each sheet back by the
-     complement of that puts it in the same plane as the desktop behind it. */
+  /* The still looks down on the desk at about 78 degrees below horizontal
+     (0.50m of drop over 0.10m of reach), so the sheets lie back by the
+     complement — 14 degrees — to sit in the plane of the desktop behind them. */
   perspective: 1100px;
   perspective-origin: 50% 38%;
 }
 
 .desk-piece {
   position: absolute;
-  width: clamp(6.5rem, 21vw, 12rem);
+  /* To scale against the room: a sheet of paper is about 21cm, the poscas
+     beside it about 13cm, and this holds that ratio at this camera. */
+  width: clamp(4.2rem, 14vw, 8.5rem);
   /* Sheet of paper, not a square print — the art is cropped to fill it. */
   aspect-ratio: 3 / 4;
   object-fit: cover;
   /* rotateX lays it down onto the desk; the tilt then happens IN that plane,
      so a sheet turned on the desk stays flat on it. One transform rather than
      the individual properties, because the order of the two matters. */
-  transform: translate(-50%, -50%) rotateX(53deg) rotateZ(var(--tilt, 0deg));
+  /* rotateZ first swings into the desk's on-screen axis, rotateX lays the
+     sheet down into its plane, then the per-sheet tilt happens IN that plane. */
+  transform: translate(-50%, -50%) rotateZ(-32deg) rotateX(14deg) rotateZ(var(--tilt, 0deg));
   transform-origin: 50% 50%;
   /* Contact shadow: tight and offset down-right, the way paper sits on wood.
      No border — these are loose sheets, not framed prints. */
@@ -347,7 +367,7 @@
 .desk-piece.is-held {
   cursor: grabbing;
   /* lifts off the desk a little while you hold it */
-  transform: translate(-50%, -50%) rotateX(53deg) rotateZ(var(--tilt, 0deg)) translateZ(1.1rem);
+  transform: translate(-50%, -50%) rotateZ(-32deg) rotateX(14deg) rotateZ(var(--tilt, 0deg)) translateZ(0.9rem);
   box-shadow: 0.4rem 0.9rem 1.4rem rgba(0, 0, 0, 0.45);
 }
 

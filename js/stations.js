@@ -59,7 +59,7 @@ const POSE = {
   // lens as the space allows. The narrow field is what flattens the
   // perspective toward orthographic — going higher isn't an option, there is
   // a bed in the way, so the flattening has to come from the lens.
-  desk: { eye: [-1.06, 1.28, -1.05], look: [-1.27, 0.82, -1.08], fov: 34 },
+  desk: { eye: [-1.02, 1.295, -1.05], look: [-1.12, 0.80, -1.07], fov: 66 },
 };
 
 const TWEEN_HOLD = 0.18;   // beat between the camera arriving and the panel
@@ -338,7 +338,9 @@ function showTrack(i) {
   playerEls.art.src = t.cover;
   playerEls.title.textContent = t.title;
   playerEls.artist.textContent = t.artist;
-  playerEls.album.textContent = t.album || t.artist;
+  // Only if the record has one of its own — repeating the artist on the
+  // album line is what the real thing does not do.
+  playerEls.album.textContent = t.album && t.album !== t.artist ? t.album : "";
   playerEls.count.textContent = `${i + 1} of ${tracks.length}`;
   // retrigger the little cross-fade
   playerEls.pod.classList.remove("is-changing");
@@ -414,13 +416,17 @@ async function loadPieces() {
     card.src = p.src;
     card.alt = "";
     card.draggable = false;
-    // Fanned out from the middle with a little rotation, the way a pile of
-    // prints actually lands on a table.
-    const spreadX = (i % 5 - 2) * 15 + (Math.random() - 0.5) * 8;
-    const spreadY = (Math.floor(i / 5) - 1) * 18 + (Math.random() - 0.5) * 8;
-    const tilt = (Math.random() - 0.5) * 22;
-    card.style.left = `calc(50% + ${spreadX}%)`;
-    card.style.top = `calc(50% + ${spreadY}%)`;
+    // The desk runs diagonally across the still, so the sheets are laid out
+    // along that axis rather than in a square block floating over the carpet.
+    const AXIS = -32 * (Math.PI / 180);          // desk direction, on screen
+    const along = (i % 5 - 2) * 13 + (Math.random() - 0.5) * 5;
+    const across = (Math.floor(i / 5) - 1) * 11 + (Math.random() - 0.5) * 5;
+    const spreadX = along * Math.cos(AXIS) - across * Math.sin(AXIS);
+    const spreadY = along * Math.sin(AXIS) + across * Math.cos(AXIS);
+    const tilt = (Math.random() - 0.5) * 18;
+    // Pushed down the desk away from the boots at the near end.
+    card.style.left = `calc(56% + ${spreadX}%)`;
+    card.style.top = `calc(49% + ${spreadY}%)`;
     card.style.setProperty("--tilt", `${tilt}deg`);
     card.style.zIndex = ++topZ;
     makeDraggable(card);
