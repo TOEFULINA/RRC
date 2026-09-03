@@ -48,7 +48,7 @@ import { initStations, pickStation, openStation, closeStation, isStationOpen,
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
 // change — that's the only thing it can't ignore.
-const MODEL_VERSION = 19;
+const MODEL_VERSION = 20;
 const MODEL_URL = `models/room.glb?v=${MODEL_VERSION}`;
 
 // A trace of the retro look — deliberately subtle, not the full pixel crunch.
@@ -812,7 +812,7 @@ let stationFrozen = false;
 function freezeToStill() {
   renderer.render(scene, camera);
   try {
-    setStill(canvas.toDataURL("image/jpeg", 0.86));
+    setStill(canvas.toDataURL("image/jpeg", 0.94));
   } catch (err) {
     // A tainted canvas would only happen if a texture came from another
     // origin; the panel still works, it just has no backdrop.

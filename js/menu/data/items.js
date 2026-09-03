@@ -169,6 +169,7 @@ export const items = [
   },
   {
     ...placeholder("item-61", "Glo Gang Layered Tee", "Tops"),
+    model: "/menu/models/glo-gang-layered-tee.glb",
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },

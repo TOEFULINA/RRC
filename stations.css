@@ -34,10 +34,9 @@
   display: grid;
   place-items: center;
   padding: max(3vh, env(safe-area-inset-top, 0px)) 4vw max(3vh, env(safe-area-inset-bottom, 0px));
-  background: radial-gradient(ellipse at center, rgba(8, 6, 12, 0.45), rgba(8, 6, 12, 0.78));
-  transition: background 0.28s ease;
-  backdrop-filter: blur(1.5px);
-  -webkit-backdrop-filter: blur(1.5px);
+  /* No wash and no blur: the room behind the panel is the point, so it is
+     left exactly as the renderer drew it. */
+  background: none;
 }
 
 .station-close {
@@ -49,7 +48,8 @@
   height: 2.4rem;
   border: 1px solid rgba(238, 231, 214, 0.35);
   border-radius: 50%;
-  background: rgba(12, 10, 16, 0.55);
+  background: rgba(12, 10, 16, 0.72);
+  box-shadow: 0 0.2rem 0.7rem rgba(0, 0, 0, 0.5);
   color: #eee7d6;
   font: 1.35rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
   cursor: pointer;
@@ -276,12 +276,9 @@
   letter-spacing: 0.12em;
 }
 
-/* Under the loft the room is already dim, so the desk gets a gentler scrim —
-   the same wash there reads as near-black. */
-.station-root[data-station="desk"] .station-scrim {
-  background: radial-gradient(ellipse at center, rgba(10, 8, 14, 0.28), rgba(10, 8, 14, 0.6));
-}
-.station-root[data-station="desk"] .station-still { filter: brightness(1.35); }
+/* Under the loft the room is genuinely dim — this lifts it to about what the
+   rest of the room reads at, rather than washing it. */
+.station-root[data-station="desk"] .station-still { filter: brightness(1.18); }
 
 /* ---------------------------------------------------------------- the desk */
 .desk-board {
@@ -289,27 +286,39 @@
   z-index: 2;
   width: min(96vw, 60rem);
   height: min(84vh, 42rem);
+  /* The still is shot from an eye 0.40m above the desk and 0.54m back, so the
+     view looks down on it at about 37 degrees. Laying each sheet back by the
+     complement of that puts it in the same plane as the desktop behind it. */
+  perspective: 1100px;
+  perspective-origin: 50% 38%;
 }
 
 .desk-piece {
   position: absolute;
-  width: clamp(6rem, 20vw, 11rem);
-  translate: -50% -50%;
-  rotate: var(--tilt, 0deg);
-  border: 0.4rem solid #fbf9f4;
-  border-radius: 2px;
-  box-shadow: 0 0.5rem 1.2rem rgba(0, 0, 0, 0.45);
+  width: clamp(6.5rem, 21vw, 12rem);
+  /* Sheet of paper, not a square print — the art is cropped to fill it. */
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  /* rotateX lays it down onto the desk; the tilt then happens IN that plane,
+     so a sheet turned on the desk stays flat on it. One transform rather than
+     the individual properties, because the order of the two matters. */
+  transform: translate(-50%, -50%) rotateX(53deg) rotateZ(var(--tilt, 0deg));
+  transform-origin: 50% 50%;
+  /* Contact shadow: tight and offset down-right, the way paper sits on wood.
+     No border — these are loose sheets, not framed prints. */
+  box-shadow: 0.15rem 0.35rem 0.5rem rgba(0, 0, 0, 0.38);
   cursor: grab;
   touch-action: none;                /* the drag is ours, not the browser's */
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  transition: box-shadow 0.15s ease, scale 0.15s ease;
+  transition: box-shadow 0.15s ease;
 }
 .desk-piece.is-held {
   cursor: grabbing;
-  scale: 1.04;
-  box-shadow: 0 1.1rem 2.2rem rgba(0, 0, 0, 0.6);
+  /* lifts off the desk a little while you hold it */
+  transform: translate(-50%, -50%) rotateX(53deg) rotateZ(var(--tilt, 0deg)) translateZ(1.1rem);
+  box-shadow: 0.4rem 0.9rem 1.4rem rgba(0, 0, 0, 0.45);
 }
 
 .desk-hint {

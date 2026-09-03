@@ -43,7 +43,9 @@ const STATIONS = [
 // most of the screen anyway — this is about the half-second of travel you see
 // before it does.
 const POSE = {
-  speaker: { back: 0.62, rise: 0.06, fov: 40 },
+  // Close enough that the speaker fills the frame behind the nano — at 0.62m
+  // it read as a small object across the room.
+  speaker: { back: 0.36, rise: 0.02, fov: 36 },
   // Measured, not derived. Deriving it from the clickable meshes put the
   // camera among the ladder rails, because the only things on the desk with
   // names of their own sit at opposite ends of it. This stands you at the
