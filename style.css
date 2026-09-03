@@ -276,8 +276,12 @@ html, body {
   1%   { visibility: visible; }
   to   { visibility: visible; -webkit-mask-position: 170% 50%; mask-position: 170% 50%; }
 }
-/* No mask support means no orb — better nothing than a solid pink word. */
-@supports not (mask-image: radial-gradient(#000, #000)) {
+/* No mask support means no orb — better nothing than a solid pink word.
+   Both spellings have to be tested: iOS Safari before 15.4 only ever had the
+   -webkit- form, so testing the unprefixed property alone reported "no mask
+   support" on exactly the phones that do support it, and hid the orb. */
+@supports not ((mask-image: radial-gradient(#000, #000)) or
+               (-webkit-mask-image: radial-gradient(#000, #000))) {
   .gb-word::after { display: none; }
 }
 

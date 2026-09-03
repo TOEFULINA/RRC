@@ -39,7 +39,7 @@ import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox,
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
 // change — that's the only thing it can't ignore.
-const MODEL_VERSION = 12;
+const MODEL_VERSION = 18;
 const MODEL_URL = `models/room.glb?v=${MODEL_VERSION}`;
 
 // A trace of the retro look — deliberately subtle, not the full pixel crunch.
@@ -117,6 +117,137 @@ const CAMERA_FOV = 62;
 // walk into the closet either.
 const BOUNDS = { minX: -1.449, maxX: 0.672, minZ: -1.872, maxZ: 0.713 };
 const WALL_MARGIN = 0.18;
+
+// ---------------------------------------------------------------- collision
+// The box above only keeps you inside the room. It says nothing about the
+// furniture, so you could walk straight through the bedframe, the bookshelves
+// and everything on them.
+//
+// Raycasting the real geometry every step was the obvious approach and it was
+// far too expensive: ~57 meshes end up within range in a room this small, and
+// four rays a frame worked out to nearly three million triangle tests. So the
+// room is measured ONCE at load into a flat occupancy grid — a 3cm map of the
+// floor marking which squares have something solid standing in them — and
+// walking is then a handful of array lookups.
+//
+// Only geometry inside the BAND is marked, which is what makes it possible to
+// keep walking under the loft bed: the platform and the mattress are above
+// your head, so they mark nothing, while the desk and the ladder legs that
+// actually stand in your way do.
+// OFF for now. The runtime cost is nil — a step test is a couple of array
+// lookups, 0.23 microseconds, so this is not what makes or breaks a phone —
+// but the room needs tuning before it can be switched on:
+//   - the camera SPAWNS inside the Poang chair (x 0.326, z -1.21 sits within
+//     the chair's x[-0.02,0.60] z[-1.32,-0.75]), so you'd start stuck
+//   - the mattress underside is at y 1.31 and the eye is at 1.375, so the
+//     whole bed side of the room reads as head-height solid
+// Flip this to true once the spawn point moves and we've decided whether the
+// space under the loft should be walkable.
+const COLLISION_ENABLED = false;
+
+const NO_COLLIDE = /outside|windowpane|curtain|canopy|^rug$|^floor|^head$|^body$|^hair\d*$|^lashes$|^eyeball$|^joint$|^shirts$|^hoodie$|^shorts$|^shoelaces$/i;
+
+// Roughly shoulder-width: narrow enough to get between the bed and the
+// dresser, wide enough that the near clip plane never ends up inside a
+// surface.
+const BODY_RADIUS = 0.22;
+const GRID_CELL = 0.03;
+// The slice of height your body occupies, relative to eye level. Anything
+// wholly above or below this is something you walk under or over.
+const BAND_BELOW = 1.05;
+const BAND_ABOVE = 0.06;
+
+let grid = null;   // { w, h, minX, minZ, cells: Uint8Array }
+
+function buildCollisionGrid(model, eyeY) {
+  const bandMin = eyeY - BAND_BELOW;
+  const bandMax = eyeY + BAND_ABOVE;
+  const minX = BOUNDS.minX - 0.1, minZ = BOUNDS.minZ - 0.1;
+  const w = Math.ceil((BOUNDS.maxX + 0.1 - minX) / GRID_CELL);
+  const h = Math.ceil((BOUNDS.maxZ + 0.1 - minZ) / GRID_CELL);
+  const cells = new Uint8Array(w * h);
+  const mark = (cx, cz) => {
+    if (cx < 0 || cz < 0 || cx >= w || cz >= h) return;
+    cells[cz * w + cx] = 1;
+  };
+
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  let tris = 0, marked = 0;
+
+  model.traverse((obj) => {
+    if (!obj.isMesh || !obj.visible || !obj.geometry) return;
+    if (NO_COLLIDE.test(obj.name || "") || NO_COLLIDE.test(obj.parent?.name || "")) return;
+    obj.updateMatrixWorld(true);
+    const pos = obj.geometry.attributes.position;
+    if (!pos) return;
+    const idx = obj.geometry.index;
+    const count = idx ? idx.count : pos.count;
+    for (let i = 0; i < count; i += 3) {
+      const i0 = idx ? idx.getX(i) : i;
+      const i1 = idx ? idx.getX(i + 1) : i + 1;
+      const i2 = idx ? idx.getX(i + 2) : i + 2;
+      a.fromBufferAttribute(pos, i0).applyMatrix4(obj.matrixWorld);
+      b.fromBufferAttribute(pos, i1).applyMatrix4(obj.matrixWorld);
+      c.fromBufferAttribute(pos, i2).applyMatrix4(obj.matrixWorld);
+      // Skip anything entirely above or below the body.
+      const yLo = Math.min(a.y, b.y, c.y), yHi = Math.max(a.y, b.y, c.y);
+      if (yHi < bandMin || yLo > bandMax) continue;
+      tris++;
+      const x0 = Math.floor((Math.min(a.x, b.x, c.x) - minX) / GRID_CELL);
+      const x1 = Math.floor((Math.max(a.x, b.x, c.x) - minX) / GRID_CELL);
+      const z0 = Math.floor((Math.min(a.z, b.z, c.z) - minZ) / GRID_CELL);
+      const z1 = Math.floor((Math.max(a.z, b.z, c.z) - minZ) / GRID_CELL);
+      const cellsWide = (x1 - x0 + 1) * (z1 - z0 + 1);
+      if (cellsWide <= 16) {
+        // Small triangle: filling its bounding box is within a cell or two of
+        // the truth and much cheaper than rasterising it.
+        for (let cz = z0; cz <= z1; cz++)
+          for (let cx = x0; cx <= x1; cx++) { mark(cx, cz); marked++; }
+        continue;
+      }
+      // Large triangle (a tabletop, a panel): rasterise properly, or its
+      // bounding box would wall off open floor beside it.
+      const ax = a.x, az = a.z, bx = b.x, bz = b.z, cx3 = c.x, cz3 = c.z;
+      const d = (bz - cz3) * (ax - cx3) + (cx3 - bx) * (az - cz3);
+      if (Math.abs(d) < 1e-12) continue;
+      for (let cz = z0; cz <= z1; cz++) {
+        for (let cx = x0; cx <= x1; cx++) {
+          const px = minX + (cx + 0.5) * GRID_CELL;
+          const pz = minZ + (cz + 0.5) * GRID_CELL;
+          const l1 = ((bz - cz3) * (px - cx3) + (cx3 - bx) * (pz - cz3)) / d;
+          const l2 = ((cz3 - az) * (px - cx3) + (ax - cx3) * (pz - cz3)) / d;
+          const l3 = 1 - l1 - l2;
+          if (l1 >= -0.02 && l2 >= -0.02 && l3 >= -0.02) { mark(cx, cz); marked++; }
+        }
+      }
+    }
+  });
+
+  grid = { w, h, minX, minZ, cells };
+  return { tris, marked, cells: w * h };
+}
+
+// Is a body centred here clear of everything? Tests the square of cells the
+// body radius covers — cheap enough to run twice a frame without thinking
+// about it.
+function spotClear(x, z) {
+  if (!COLLISION_ENABLED || !grid) return true;
+  const r = Math.ceil(BODY_RADIUS / GRID_CELL);
+  const cx = Math.floor((x - grid.minX) / GRID_CELL);
+  const cz = Math.floor((z - grid.minZ) / GRID_CELL);
+  const r2 = r * r;
+  for (let dz = -r; dz <= r; dz++) {
+    const zz = cz + dz;
+    if (zz < 0 || zz >= grid.h) continue;
+    for (let dx = -r; dx <= r; dx++) {
+      if (dx * dx + dz * dz > r2) continue;   // a disc, not a square
+      const xx = cx + dx;
+      if (xx < 0 || xx >= grid.w) continue;
+      if (grid.cells[zz * grid.w + xx]) return false;
+    }
+  }
+  return true;
+}
 
 // ---------------------------------------------------------------- renderer
 const canvas = document.getElementById("scene");
@@ -719,12 +850,16 @@ function applyWalk(delta) {
 
   const beforeX = camera.position.x;
   const beforeZ = camera.position.z;
-  camera.position.x = THREE.MathUtils.clamp(
+  // Each axis is tested on its own so that walking diagonally into a surface
+  // slides you along it rather than stopping you dead.
+  const tryX = THREE.MathUtils.clamp(
     camera.position.x + _move.x, BOUNDS.minX + WALL_MARGIN, BOUNDS.maxX - WALL_MARGIN
   );
-  camera.position.z = THREE.MathUtils.clamp(
+  if (spotClear(tryX, camera.position.z)) camera.position.x = tryX;
+  const tryZ = THREE.MathUtils.clamp(
     camera.position.z + _move.z, BOUNDS.minZ + WALL_MARGIN, BOUNDS.maxZ - WALL_MARGIN
   );
+  if (spotClear(camera.position.x, tryZ)) camera.position.z = tryZ;
   // Distance ACTUALLY covered, measured after the clamp — walk into a wall and
   // the bob stops rather than jogging on the spot.
   updateBob(delta, Math.hypot(camera.position.x - beforeX, camera.position.z - beforeZ));
@@ -955,6 +1090,12 @@ loader.load(
     // raycasts, which needs resolved world matrices.
     initVinyl(model, camera, canvas);
     const seats = initSeat(model);
+    if (COLLISION_ENABLED) {
+      const gridStats = buildCollisionGrid(model, CAMERA_EYE.y);
+      console.info(`collision: ${gridStats.marked} of ${gridStats.cells} floor cells blocked, from ${gridStats.tris} triangles in the body band.`);
+    } else {
+      console.info("collision: off (COLLISION_ENABLED = false).");
+    }
     console.info(seats ? `seat: ${seats} mesh(es) — click the chair to sit.` : "seat: disabled.");
 
     scene.environment = pmrem.fromScene(model, 0.02, 0.1, 40).texture;
