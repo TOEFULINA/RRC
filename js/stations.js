@@ -48,7 +48,12 @@ const POSE = {
   // camera among the ladder rails, because the only things on the desk with
   // names of their own sit at opposite ends of it. This stands you at the
   // desk looking down its length, which is the POV she asked for.
-  desk: { eye: [-0.55, 1.32, -0.98], look: [-1.20, 0.86, -1.42], fov: 58 },
+  // Square on to the desk's long side so its edge runs horizontal across the
+  // frame, boot at the left, poscas at the right — her Blender reference.
+  // Two constraints fix the height: the loft platform is at y=1.31, so the eye
+  // has to stay under it AND tilt down far enough that the top of the frame
+  // never reaches it either.
+  desk: { eye: [-0.72, 1.18, -1.10], look: [-1.26, 0.78, -1.10], fov: 68 },
 };
 
 const TWEEN_HOLD = 0.18;   // beat between the camera arriving and the panel
@@ -262,13 +267,16 @@ export function setStill(dataUrl) {
 let playerEls = null;
 
 function buildPlayer(parent) {
-  const pod = el("div", "ipod", parent);
+  // dock wrapper: the thing that travels down, with the pod inside it
+  const dock = el("div", "ipod-dock", parent);
+  const pod = el("div", "ipod", dock);
   const screen = el("div", "ipod-screen", pod);
   const art = el("img", "ipod-art", screen);
   art.alt = "";
   const meta = el("div", "ipod-meta", screen);
   const title = el("div", "ipod-title", meta);
   const artist = el("div", "ipod-artist", meta);
+  const count = el("div", "ipod-count", screen);
   const bar = el("div", "ipod-bar", screen);
   const fill = el("div", "ipod-fill", bar);
   bar.addEventListener("pointerdown", (e) => {
@@ -277,17 +285,15 @@ function buildPlayer(parent) {
     audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
   });
 
-  const list = el("ol", "ipod-list", screen);
-
   const wheel = el("div", "ipod-wheel", pod);
-  const prev = el("button", "ipod-btn prev", wheel); prev.textContent = "◀◀";
-  const play = el("button", "ipod-btn play", wheel); play.textContent = "▶";
-  const next = el("button", "ipod-btn next", wheel); next.textContent = "▶▶";
+  const prev = el("button", "ipod-btn prev", wheel); prev.textContent = "|◀◀";
+  const play = el("button", "ipod-btn play", wheel); play.textContent = "▶ ❚❚";
+  const next = el("button", "ipod-btn next", wheel); next.textContent = "▶▶|";
   prev.addEventListener("click", () => step(-1));
   next.addEventListener("click", () => step(1));
   play.addEventListener("click", togglePlay);
 
-  playerEls = { pod, art, title, artist, fill, list, play };
+  playerEls = { dock, pod, art, title, artist, count, fill, play };
 }
 
 async function loadTracks() {
@@ -298,24 +304,22 @@ async function loadTracks() {
     console.error("player: couldn't load the track list —", err);
     return;
   }
-  const { list } = playerEls;
-  list.textContent = "";
-  tracks.forEach((t, i) => {
-    const li = el("li", "ipod-row", list);
-    el("span", "ipod-row-title", li).textContent = t.title;
-    el("span", "ipod-row-artist", li).textContent = t.artist;
-    li.addEventListener("click", () => playTrack(i));
-  });
   showTrack(0);
 }
 
+// One track on screen at a time, the way the real thing works — you move
+// through the record with the wheel rather than reading a list.
 function showTrack(i) {
   const t = tracks[i];
   if (!t) return;
   playerEls.art.src = t.cover;
   playerEls.title.textContent = t.title;
   playerEls.artist.textContent = t.artist;
-  [...playerEls.list.children].forEach((li, k) => li.classList.toggle("is-current", k === i));
+  playerEls.count.textContent = `${i + 1} of ${tracks.length}`;
+  // retrigger the little cross-fade
+  playerEls.pod.classList.remove("is-changing");
+  void playerEls.pod.offsetWidth;
+  playerEls.pod.classList.add("is-changing");
 }
 
 function playTrack(i) {
@@ -332,22 +336,26 @@ function playTrack(i) {
       playerEls.fill.style.width = `${pct}%`;
     });
     audio.addEventListener("ended", () => step(1));
-    audio.addEventListener("play", () => { playerEls.play.textContent = "❚❚"; });
-    audio.addEventListener("pause", () => { playerEls.play.textContent = "▶"; });
+    audio.addEventListener("play", () => playerEls.pod.classList.add("is-playing"));
+    audio.addEventListener("pause", () => playerEls.pod.classList.remove("is-playing"));
   }
   audio.src = tracks[i].src;
   audio.play().catch((err) => console.warn("player: playback blocked —", err));
 }
 
 function togglePlay() {
-  if (nowPlaying < 0) { playTrack(0); return; }
+  if (nowPlaying < 0) { playTrack(browsing); return; }
   if (audio.paused) audio.play().catch(() => {}); else audio.pause();
 }
 
+let browsing = 0;
 function step(dir) {
   if (!tracks.length) return;
-  const i = nowPlaying < 0 ? 0 : (nowPlaying + dir + tracks.length) % tracks.length;
-  playTrack(i);
+  browsing = ((nowPlaying < 0 ? browsing : nowPlaying) + dir + tracks.length) % tracks.length;
+  // Skipping while it is playing keeps playing; skipping while idle just
+  // moves through the sleeve art, same as scrolling a real one.
+  if (nowPlaying >= 0) playTrack(browsing);
+  else showTrack(browsing);
 }
 
 // ---- desk: the illustrations --------------------------------------------

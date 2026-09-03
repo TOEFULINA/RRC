@@ -192,6 +192,7 @@ export const items = [
   {
     ...placeholder("item-06", "Sticker Print Jorts", "Bottoms"),
     model: "/menu/models/sticker-print-jorts.glb",
+    viewerStartAngle: { thetaDeg: 272.6, phiDeg: 89.4 },
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "98" },
@@ -202,6 +203,7 @@ export const items = [
   {
     ...placeholder("item-60", "Sapphire Jorts", "Bottoms"),
     model: "/menu/models/sapphire-jorts.glb",
+    viewerStartAngle: { thetaDeg: 274.0, phiDeg: 98.0 },
     stats: [
       { label: "Year", value: "2024" },
       { label: "Value", value: "—" },

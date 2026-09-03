@@ -25,6 +25,13 @@
 console.info("%cBUILD rain-c3 — green-grey rain",
   "background:#123;color:#8fd;padding:2px 6px;border-radius:3px");
 
+// index.html carries the same <title>, but the HTML document itself has no
+// cache-busting query on it the way the stylesheets and scripts do — so a
+// browser holding an older copy of the page keeps showing the old tab name.
+// This script IS versioned, so setting it here makes the title correct itself
+// on the next load whatever the HTML shell says.
+document.title = "TOEFU";
+
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
@@ -41,7 +48,7 @@ import { initStations, pickStation, openStation, closeStation, isStationOpen,
 // Bumped whenever the .glb changes. The browser will happily keep serving a
 // cached 16MB model even through a hard refresh, so the URL itself has to
 // change — that's the only thing it can't ignore.
-const MODEL_VERSION = 18;
+const MODEL_VERSION = 19;
 const MODEL_URL = `models/room.glb?v=${MODEL_VERSION}`;
 
 // A trace of the retro look — deliberately subtle, not the full pixel crunch.

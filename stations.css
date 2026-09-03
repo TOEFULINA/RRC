@@ -58,68 +58,157 @@
 .station-close:hover { background: rgba(40, 34, 50, 0.8); border-color: rgba(238, 231, 214, 0.7); }
 
 /* Only the panel for the open station is in the layout. */
-.station-root .ipod,
+.station-root .ipod-dock,
 .station-root .desk-board { display: none; }
-.station-root[data-station="speaker"] .ipod { display: grid; }
+.station-root[data-station="speaker"] .ipod-dock { display: grid; }
 .station-root[data-station="desk"] .desk-board { display: block; }
 
 /* ---------------------------------------------------------------- the player
-   Drawn, not modelled: a flat panel that drops in from above the frame, which
-   is the same beat as a device descending into shot without the cost of one. */
-.ipod {
+   A 3rd-gen iPod nano, drawn rather than modelled: the squat aluminium body,
+   the 2-inch screen sitting above a click wheel, in the red Product(RED)
+   finish. It rides down on a dock lip so it reads as slotting into the
+   speaker on the table rather than floating in front of it. */
+.ipod-dock {
   position: relative;
   z-index: 2;
-  grid-template-rows: 1fr auto;
-  width: min(92vw, 23rem);
-  max-height: 88vh;
-  padding: 0.9rem 0.9rem 0.4rem;
-  border-radius: 1.6rem;
-  background: linear-gradient(#f2f0ea, #d8d5cd);
-  box-shadow: 0 1.4rem 3rem rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transform: translateY(-130%);
-  transition: transform 0.55s cubic-bezier(0.22, 1, 0.32, 1);
+  display: grid;
+  justify-items: center;
+  transform: translateY(-140%);
 }
-.station-root.is-open .ipod { transform: translateY(0); }
+/* Comes down out of frame, tips level on the way, drops the last few
+   millimetres and settles — a thing being seated in a dock, not a panel
+   sliding on. */
+.station-root.is-open .ipod-dock {
+  animation: ipod-dock-in 0.78s cubic-bezier(0.32, 0.9, 0.3, 1) forwards;
+}
+@keyframes ipod-dock-in {
+  from   { transform: translateY(-140%) rotate(-4deg) scale(0.96); }
+  62%    { transform: translateY(4%)    rotate(0.6deg) scale(1); }
+  78%    { transform: translateY(-2.5%) rotate(-0.4deg); }
+  90%    { transform: translateY(1.2%)  rotate(0deg); }
+  to     { transform: translateY(0)     rotate(0deg) scale(1); }
+}
 
+.ipod {
+  position: relative;
+  /* The dock is the grid now, so the pod has to declare its own — without
+     this its rows collapse, the track list grows unbounded and shoves the
+     click wheel off the bottom of the screen. */
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  /* Gen 3 proportions: 52 x 70mm, so a squat body, not the tall gen 6 stick. */
+  width: min(64vw, 15.5rem);
+  padding: 0.5rem 0.5rem 0.55rem;
+  /* Anodised aluminium: a bright top edge, a deeper body, a shadowed base. */
+  border-radius: 0.85rem;
+  background:
+    linear-gradient(160deg, #ff5a5f 0%, #e0202c 34%, #b8121d 72%, #8e0b15 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.45),
+    inset 2px 0 3px rgba(0, 0, 0, 0.28),
+    inset -2px 0 3px rgba(255, 255, 255, 0.16),
+    0 1.2rem 2.4rem rgba(0, 0, 0, 0.6);
+}
+/* The chamfer round the face, which is what makes the metal read as metal. */
+.ipod::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.7), rgba(255,255,255,0) 40%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* The dock it sits in — a dark lip the body disappears into, so the drop
+   ends on something instead of stopping in mid-air. */
+.ipod-dock::after {
+  content: "";
+  width: min(70vw, 17rem);
+  height: 1.25rem;
+  margin-top: -0.4rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: linear-gradient(#2b2b30, #17171b 55%, #0d0d10);
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.85),
+    0 0.5rem 1.2rem rgba(0, 0, 0, 0.55);
+}
+
+/* The 2-inch screen is landscape 4:3, and the gen 3 split it: menu list down
+   the left, the current track's art on the right. Same split here. */
 .ipod-screen {
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
-  gap: 0.5rem;
+  aspect-ratio: 4 / 3;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "art meta"
+    "art count"
+    "bar bar";
+  gap: 0.25rem 0.55rem;
+  align-content: center;
+  justify-content: center;
   min-height: 0;
-  padding: 0.75rem;
-  border-radius: 0.7rem;
-  background: #12131a;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.28rem;
+  background: #0e0f14;
   color: #e8e6df;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+  /* glass sunk into the body */
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.9),
+    inset 0 2px 5px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .ipod-art {
-  width: 100%;
+  grid-area: art;
+  width: 5.6rem;
   aspect-ratio: 1;
   object-fit: cover;
-  border-radius: 0.35rem;
+  align-self: center;
+  grid-row: 1 / 3;
+  border-radius: 0.15rem;
   background: #24262f;
 }
 
-.ipod-meta { min-width: 0; }
+.ipod-meta { grid-area: meta; min-width: 0; }
 .ipod-title {
-  font: 1.05rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
+  align-self: end;
+  max-width: 8.5rem;
+  white-space: normal;
+  font: 0.86rem/1.15 var(--ui-font, "Pix32 Cond", sans-serif);
   letter-spacing: 0.02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .ipod-artist {
-  margin-top: 0.15rem;
-  font: 0.78rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
+  margin-top: 0.1rem;
+  font: 0.72rem/1.2 var(--ui-font, "Pix32 Cond", sans-serif);
   color: #9b98a8;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.ipod-count {
+  grid-area: count;
+  align-self: start;
+  color: #6d6a7a;
+  font: 0.6rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  letter-spacing: 0.1em;
+}
+
+/* a quick fade as the track changes, so skipping reads as a screen redraw */
+.ipod.is-changing .ipod-art,
+.ipod.is-changing .ipod-meta { animation: ipod-swap 0.22s ease-out; }
+@keyframes ipod-swap { from { opacity: 0.15; } to { opacity: 1; } }
+
 .ipod-bar {
-  height: 0.4rem;
+  grid-area: bar;
+  height: 0.3rem;
   border-radius: 0.2rem;
   background: #2b2d38;
   cursor: pointer;
@@ -132,52 +221,60 @@
   transition: width 0.15s linear;
 }
 
-.ipod-list {
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;      /* don't scroll the page behind it */
-  -webkit-overflow-scrolling: touch;
-  list-style: none;
-  min-height: 4rem;
-}
-.ipod-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.6rem;
-  padding: 0.4rem 0.3rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font: 0.76rem/1.25 var(--ui-font, "Pix32 Cond", sans-serif);
-  cursor: pointer;
-}
-.ipod-row:hover { background: rgba(255, 255, 255, 0.05); }
-.ipod-row.is-current { color: #ec1c8c; }
-.ipod-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ipod-row-artist { flex: 0 0 auto; color: #82808f; }
-.ipod-row.is-current .ipod-row-artist { color: #b3477f; }
 
+/* The click wheel. One ring, four printed labels, a centre button — the
+   buttons are positioned on it rather than sitting in a row. */
 .ipod-wheel {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.7rem 0 0.5rem;
+  position: relative;
+  width: 6.6rem;
+  height: 6.6rem;
+  margin: 0.55rem auto 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 34%, #fbf7f2, #ddd6cd 62%, #c3bbb1);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.ipod-wheel::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 2.7rem;
+  height: 2.7rem;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 36%, #fdfbf8, #e2dcd3 70%, #cac2b8);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.9), 0 1px 3px rgba(0,0,0,0.3);
 }
 .ipod-btn {
-  min-width: 3.2rem;
-  padding: 0.55rem 0.7rem;
+  position: absolute;
   border: none;
-  border-radius: 999px;
-  background: #c9c6bd;
-  color: #2b2b33;
-  font: 0.8rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  background: none;
+  color: #6f675e;
+  font: 0.62rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.08s ease;
+  padding: 0.5rem 0.6rem;
+  transition: color 0.15s ease, transform 0.08s ease;
 }
-.ipod-btn:hover { background: #b9b6ac; }
-.ipod-btn:active { transform: translateY(1px); }
-.ipod-btn.play { min-width: 4.4rem; background: #2b2b33; color: #f0eee7; }
-.ipod-btn.play:hover { background: #3a3a45; }
+.ipod-btn:hover { color: #2b2b33; }
+.ipod-btn:active { transform: scale(0.94); }
+.ipod-btn.prev { left: 0.35rem; top: 50%; translate: 0 -50%; }
+.ipod-btn.next { right: 0.35rem; top: 50%; translate: 0 -50%; }
+.ipod-btn.play { left: 50%; bottom: 0.3rem; translate: -50% 0; }
+/* MENU is printed at the top of a real one and does nothing here, so it is
+   text rather than a control. */
+.ipod-wheel::before {
+  content: "MENU";
+  position: absolute;
+  left: 50%;
+  top: 0.5rem;
+  translate: -50% 0;
+  color: #6f675e;
+  font: 0.6rem/1 var(--ui-font, "Pix32 Cond", sans-serif);
+  letter-spacing: 0.12em;
+}
 
 /* Under the loft the room is already dim, so the desk gets a gentler scrim —
    the same wash there reads as near-black. */
@@ -232,6 +329,6 @@
 #scene.hovering-station { cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
-  .ipod { transition: none; }
+  .ipod-dock { transition: none; }
   .station-root { transition: none; }
 }
