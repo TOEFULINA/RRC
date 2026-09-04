@@ -181,8 +181,8 @@ export const items = [
   {
     ...placeholder("item-64", "Football Patch Jersey", "Tops"),
     model: "/menu/models/football-patch-jersey.glb",
-    // Front-on: the BRAVEST graphic and both patches are on this face.
-    viewerStartAngle: { thetaDeg: 90.0, phiDeg: 80.0 },
+    // Front-on — same theta correction as the jacket above.
+    viewerStartAngle: { thetaDeg: 270.0, phiDeg: 80.0 },
     stats: [
       { label: "Year", value: "2024" },
       { label: "Value", value: "—" },
@@ -193,8 +193,9 @@ export const items = [
   {
     ...placeholder("item-63", "Denim Patchwork Jacket", "Tops"),
     model: "/menu/models/denim-patchwork-jacket.glb",
-    // Front-on: the patches are all on one face, and the back is plain denim.
-    viewerStartAngle: { thetaDeg: 90.0, phiDeg: 80.0 },
+    // Front-on. My preview harness measures theta the other way round, so the
+    // number that looked like the front there is the back in the real viewer.
+    viewerStartAngle: { thetaDeg: 270.0, phiDeg: 80.0 },
     stats: [
       { label: "Year", value: "2025" },
       { label: "Value", value: "—" },
