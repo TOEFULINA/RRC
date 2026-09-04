@@ -806,6 +806,14 @@ html, body {
   #vinyl-nav svg { width: 24px; height: 24px; }
 }
 
+:root {
+  /* Height of the caption footer on touch. The d-pad is lifted by exactly
+     this, so the two stack instead of overlapping — see the touch block at the
+     end of the toefu-line section. Declared on the root because both elements
+     need it and they are siblings, not nested. */
+  --room-footer: 2.5rem;
+}
+
 /* ---------------------------------------------------------------- toefu line
    The caption strip along the bottom of explore mode: TOEFU: "…". One line at
    a time, said on arrival and on every clickable thing — see js/lines.js,
@@ -826,11 +834,7 @@ html, body {
   /* Above the station and pickup overlays (40) so it can caption them, below
      the pause menu (50), which hides it outright. */
   z-index: 45;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: baseline;
-  gap: 0.5em;
+  display: block;
   padding: 0 clamp(1rem, 4vw, 3rem);
   pointer-events: none;
   color: #ffffff;
@@ -851,24 +855,42 @@ html, body {
   transform: translateY(0);
 }
 .toefu-line-name {
-  flex: 0 0 auto;
+  margin-right: 0.45em;
   font-weight: 700;
   letter-spacing: 0.12em;
 }
 /* Wraps rather than truncating. These lines are written to be read, and an
-   ellipsis would cut one off mid-sentence on a phone; the measure keeps it to
-   a couple of rows at most on a wide screen. */
-.toefu-line-quote {
-  min-width: 0;
+   ellipsis would cut one off mid-sentence on a phone. The measure lives on the
+   block below rather than on the quote itself, so the name stays inline with
+   the first row instead of being pushed above it. */
+.toefu-line-inner {
   max-width: min(96vw, 62rem);
+  margin: 0 auto;
 }
 
-/* The d-pad owns the bottom-right corner on touch, so the line sits above it
-   rather than running underneath. */
+/* On touch the line becomes a footer: pinned to the very bottom edge, full
+   width, with the d-pad stacked directly on top of it. Lifting the pad by
+   exactly the footer's own height is what keeps the two from ever crossing —
+   the pad is 3x42px plus gaps in the bottom-left, so any value that merely
+   "clears" it by guesswork lands the line in the middle of the arrows, which
+   is what it was doing. */
 @media (hover: none) and (pointer: coarse) {
   .toefu-line {
-    bottom: calc(max(1.2rem, env(safe-area-inset-bottom, 0px)) + 7.5rem);
+    bottom: 0;
+    min-height: var(--room-footer);
+    padding: 0.35rem 0.9rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
   }
+  #mobile-controls {
+    bottom: calc(max(20px, env(safe-area-inset-bottom, 0px)) + var(--room-footer));
+  }
+  /* The prompt sits above the pad rather than in the footer, so the footer
+     stays one line of type and nothing has to move to make room. */
+  .toefu-ask {
+    bottom: calc(var(--room-footer) + 0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* Re-stated at the same specificity as the desktop rule below, which would
+     otherwise lift the line off the bottom edge when a question is up. */
+  body:has(.toefu-ask.is-on) .toefu-line { bottom: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

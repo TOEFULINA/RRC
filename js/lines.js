@@ -66,6 +66,12 @@ let el = null;
 let quoteEl = null;
 let timer = 0;
 let followTimer = 0;
+// The tallest the line has ever been this session. On touch the d-pad is
+// stacked on top of the footer by this much, so it has to account for a line
+// that wraps to two or three rows — a fixed 2.5rem band left the longest lines
+// growing up into the arrows. It only ever grows, so the pad settles once and
+// then stays put instead of hopping every time a shorter line appears.
+let footerPx = 0;
 const said = new Set();   // keys asked for with { once: true }
 const heard = new Set();  // every key that has been said at least once
 
@@ -74,7 +80,10 @@ function ensure() {
   el = document.createElement("div");
   el.className = "toefu-line";
   el.setAttribute("aria-live", "polite");
-  el.innerHTML = `<span class="toefu-line-name"></span><span class="toefu-line-quote"></span>`;
+  el.innerHTML =
+    `<span class="toefu-line-inner">` +
+    `<span class="toefu-line-name"></span><span class="toefu-line-quote"></span>` +
+    `</span>`;
   el.querySelector(".toefu-line-name").textContent = `${SPEAKER}:`;
   quoteEl = el.querySelector(".toefu-line-quote");
   document.body.appendChild(el);
@@ -100,6 +109,7 @@ export function sayLine(key, opts = {}) {
   ensure();
   quoteEl.textContent = text;
   el.classList.add("is-on");
+  measureFooter();
   clearTimeout(timer);
   timer = setTimeout(() => el.classList.remove("is-on"), HOLD_MS);
 
@@ -110,6 +120,18 @@ export function sayLine(key, opts = {}) {
   if (follow) {
     followTimer = setTimeout(() => sayLine(follow.key, opts), follow.after);
   }
+}
+
+// Height has to be read after the browser has laid the new text out, and only
+// ever raised — see footerPx above.
+function measureFooter() {
+  requestAnimationFrame(() => {
+    if (!el) return;
+    const h = Math.ceil(el.getBoundingClientRect().height);
+    if (h <= footerPx) return;
+    footerPx = h;
+    document.documentElement.style.setProperty("--room-footer", `${h}px`);
+  });
 }
 
 // Used when something takes over the screen — the pause menu. The line belongs
