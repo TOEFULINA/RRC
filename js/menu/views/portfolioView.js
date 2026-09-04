@@ -33,6 +33,14 @@ function projectsInCategory(cat) {
   return found ? found.projects : [];
 }
 
+// Set by the room before it opens this screen, so clicking the canvases or the
+// sketchbooks lands on the matching category instead of on "All". Same shape
+// as itemsView's requestItem: written once, consumed once.
+let pendingCategory = null;
+export function requestPortfolioCategory(name) {
+  pendingCategory = name;
+}
+
 export function renderPortfolioView(container) {
   const categories = getCategories();
 
@@ -55,6 +63,11 @@ export function renderPortfolioView(container) {
   const detailCol = el.querySelector(".detail-col");
 
   let categoryIndex = 0;
+  if (pendingCategory) {
+    const want = categories.indexOf(pendingCategory);
+    pendingCategory = null;
+    if (want > -1) categoryIndex = want;
+  }
   // null = showing the category's collage; a project = showing that one piece.
   let openPiece = null;
   let lastRenderedKey = null;

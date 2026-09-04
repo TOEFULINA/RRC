@@ -484,15 +484,6 @@ export const items = [
     description: "Packaging design for Bravest Studios Spike Sandal.",
   },
   {
-    ...placeholder("item-24", "Spike Shoe Box", "Packaging"),
-    stats: [
-      { label: "Year", value: "2026" },
-      { label: "Value", value: "—" },
-      { label: "Weight", value: "1" },
-    ],
-    description: "Packaging design for Bravest Studios Spike Shoe.",
-  },
-  {
     ...placeholder("item-25", "Bag Clog Box", "Packaging"),
     model: "/menu/models/bag-clog-box.glb",
     viewerStartAngle: { thetaDeg: 47.2, phiDeg: 52.1 },
@@ -548,7 +539,7 @@ export const items = [
     ],
   },
   {
-    ...placeholder("item-34", "Halloween Animal Crossing Set", "Nail Sets"),
+    ...placeholder("item-34", "Animal Crossing Halloween Set", "Nail Sets"),
     model: "/menu/models/ac-halloween-nails.glb",
     viewerStartAngle: { thetaDeg: 234.4, phiDeg: 49.3 },
     stats: [

@@ -206,6 +206,19 @@ function openItemPreview(itemId) {
     .map((s2) => `<span><i>${s2.label}</i> ${s2.value}</span>`)
     .join("");
 
+  // The caption line has to clear the card at the bottom of this overlay. The
+  // card's height depends on its own copy (stats wrap differently per item),
+  // so it is measured after layout rather than guessed at in CSS.
+  document.body.classList.add("has-pickup");
+  requestAnimationFrame(() => {
+    const card = itemRoot.querySelector(".pickup-card");
+    if (card) {
+      document.documentElement.style.setProperty(
+        "--pickup-card-h", `${Math.round(card.getBoundingClientRect().height)}px`
+      );
+    }
+  });
+
   itemDispose = mountModelViewer(
     itemViewerBox,
     item.model,
@@ -226,6 +239,7 @@ function closeItemPreview() {
   itemDispose = null;
   itemCurrent = null;
   itemOpen = false;
+  document.body.classList.remove("has-pickup");
   onThaw();
   setTimeout(() => { if (!itemOpen && itemRoot) itemRoot.hidden = true; }, 320);
   return true;

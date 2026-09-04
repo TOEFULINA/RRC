@@ -69,6 +69,13 @@ export function requestItem(id) {
   pendingItemId = id;
 }
 
+// Set by the room before it opens this screen, so clicking the shirts lands on
+// Tops instead of the top of the list. Consumed once, like pendingItemId.
+let pendingCategory = null;
+export function requestItemCategory(name) {
+  pendingCategory = name;
+}
+
 export function renderItemsView(container) {
   const categories = getCategories();
 
@@ -122,6 +129,12 @@ export function renderItemsView(container) {
 
   let categoryIndex = 0;
   let itemIndex = 0;
+  if (pendingCategory) {
+    const want = categories.indexOf(pendingCategory);
+    pendingCategory = null;
+    if (want > -1) categoryIndex = want;
+  }
+
   if (pendingItemId) {
     const want = items.find((i) => i.id === pendingItemId);
     pendingItemId = null;

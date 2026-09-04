@@ -39,6 +39,10 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { isPauseMenuOpen, setPauseMenuOpen, onPauseMenuChange } from "./pauseState.js";
 import { navigate, getCurrentRoute } from "./menu/router.js";
 import { requestItem } from "./menu/views/itemsView.js";
+import { sayLine, hideLine, showToast, askLine, runHighEffect } from "./lines.js";
+import { initTalkers, pickTalker, lookingOutside } from "./talkers.js";
+import { requestPortfolioCategory } from "./menu/views/portfolioView.js";
+import { requestItemCategory } from "./menu/views/itemsView.js";
 import { initAmbient, updateAmbient } from "./ambient.js?v=2026-09-03web3";
 import { initRainAudio, toggleRainAudio } from "./rainAudio.js?v=2026-09-01d1";
 import { initVinyl, updateVinyl, pickVinyl, setVinylSelected, vinylFocusBox,
@@ -522,7 +526,10 @@ canvas.addEventListener("pointermove", (e) => {
     setSeatHover(pickSeat(e));
   }
   if (!pointerDownPos && !camTween && !isPauseMenuOpen() && !isStationOpen() && e.pointerType !== "touch") {
-    canvas.classList.toggle("hovering-station", !!pickStation(e.clientX, e.clientY));
+    canvas.classList.toggle(
+    "hovering-station",
+    !!pickStation(e.clientX, e.clientY) || !!pickTalker(e.clientX, e.clientY)
+  );
   }
   if (!pointerDownPos || isPauseMenuOpen()) return;
   dragDistance += Math.abs(e.movementX) + Math.abs(e.movementY);
@@ -538,10 +545,14 @@ canvas.addEventListener("pointerup", (e) => {
   if (focusedVinyl) { unfocusVinyl(); return; }
   if (seated) { standUp(); return; }
   const record = pickVinyl(e.clientX, e.clientY);
-  if (record) { focusVinyl(record); return; }
+  if (record) { focusVinyl(record); sayLine("vinyl"); return; }
   const station = pickStation(e.clientX, e.clientY);
-  if (station) { tryOpenStation(station); return; }
-  if (pickSeat(e)) sitDown();
+  // The line is said on the open, not on the click: a station that refuses to
+  // open (mid-tween, already inside another one) shouldn't announce itself.
+  if (station) { if (tryOpenStation(station)) sayLine(station); return; }
+  const talker = pickTalker(e.clientX, e.clientY);
+  if (talker) { runTalker(talker); return; }
+  if (pickSeat(e)) { sitDown(); sayLine("chair"); }
 });
 canvas.addEventListener("pointercancel", () => { pointerDownPos = null; });
 window.addEventListener("blur", () => { pointerDownPos = null; });
@@ -848,6 +859,26 @@ function thawFromStill() {
   clock.getDelta();   // swallow the paused time, or the first frame lurches
 }
 
+// A talker says its line and, depending on the thing, does one more thing:
+// the joint sets off the screen effect and drops a pickup notice, the canvases
+// and the sketchbooks offer to open their portfolio category.
+function runTalker(spec) {
+  sayLine(spec.key);
+  if (spec.effect === "high") {
+    showToast("Joint (0.5g) Added");
+    runHighEffect();
+  }
+  if (spec.ask) {
+    const { label, menu = "portfolio", category } = spec.ask;
+    askLine(label, () => {
+      if (menu === "items") requestItemCategory(category);
+      else requestPortfolioCategory(category);
+      navigate(menu);
+      setPauseMenuOpen(true);
+    });
+  }
+}
+
 function tryOpenStation(id) {
   if (focusedVinyl || seated || camTween || isStationOpen()) return false;
   return openStation(id, BOUNDS, {
@@ -1029,7 +1060,15 @@ onPauseMenuChange((open) => {
     }
     pointerDownPos = null;
     moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
+    // The line belongs to the room. Whatever is on top of it doesn't get to
+    // keep talking underneath.
+    hideLine();
+    return;
   }
+  // Menu closed — you're in the room. The intro says itself the first time
+  // and never again in the session, so it reads as an arrival rather than a
+  // notice that fires every time you press Explore.
+  sayLine("intro", { once: true });
 });
 
 document.getElementById("pause-open-btn")?.addEventListener("click", () => {
@@ -1190,6 +1229,7 @@ Promise.all([modelBytes, bootAnimationDone()])
       },
     });
     console.info(`stations: ${stations.join(", ") || "none"}.`);
+    initTalkers(model, camera, canvas);
     if (COLLISION_ENABLED) {
       const gridStats = buildCollisionGrid(model, CAMERA_EYE.y);
       console.info(`collision: ${gridStats.marked} of ${gridStats.cells} floor cells blocked, from ${gridStats.tris} triangles in the body band.`);
@@ -1234,10 +1274,27 @@ window.addEventListener("resize", () => {
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();
 
+// Looking out of the window for a while earns a line about the weather. The
+// raycast is throttled to ~4/s rather than run per frame — it is a mood beat,
+// not something that needs to be frame-accurate.
+const WINDOW_DWELL = 3.4;      // seconds of looking before she says anything
+let windowGaze = 0;
+let windowCheck = 0;
+function updateWindowGaze(delta) {
+  windowCheck += delta;
+  if (windowCheck < 0.25) return;
+  windowCheck = 0;
+  if (seated || focusedVinyl || isStationOpen()) { windowGaze = 0; return; }
+  if (!lookingOutside()) { windowGaze = 0; return; }
+  windowGaze += 0.25;
+  if (windowGaze >= WINDOW_DWELL) sayLine("window", { once: true });
+}
+
 function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.1);
   if (!isPauseMenuOpen() && !stationFrozen) {
+    updateWindowGaze(delta);
     // While a sit/stand tween is running it owns the camera outright.
     if (!updateCamTween(delta) && !seated && !focusedVinyl) applyWalk(delta);
     applyLookDelta(0, 0); // re-derive target from the new position
