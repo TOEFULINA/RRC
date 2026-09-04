@@ -179,6 +179,43 @@ export const items = [
     description: "Description coming soon.",
   },
   {
+    ...placeholder("item-64", "Football Patch Jersey", "Tops"),
+    model: "/menu/models/football-patch-jersey.glb",
+    // Front-on: the BRAVEST graphic and both patches are on this face.
+    viewerStartAngle: { thetaDeg: 90.0, phiDeg: 80.0 },
+    stats: [
+      { label: "Year", value: "2024" },
+      { label: "Value", value: "—" },
+      { label: "Weight", value: "1" },
+    ],
+    description: "Description coming soon.",
+  },
+  {
+    ...placeholder("item-63", "Denim Patchwork Jacket", "Tops"),
+    model: "/menu/models/denim-patchwork-jacket.glb",
+    // Front-on: the patches are all on one face, and the back is plain denim.
+    viewerStartAngle: { thetaDeg: 90.0, phiDeg: 80.0 },
+    stats: [
+      { label: "Year", value: "2025" },
+      { label: "Value", value: "—" },
+      { label: "Weight", value: "1" },
+    ],
+    description: "Description coming soon.",
+  },
+  {
+    // Same mesh and the same matte material as item-61 — only the base colour
+    // map differs, so it keeps that one's viewer angle too.
+    ...placeholder("item-62", "Glo Gang Black Layered Tee", "Tops"),
+    model: "/menu/models/glo-gang-black-layered-tee.glb",
+    viewerStartAngle: { thetaDeg: 176.5, phiDeg: 86.0 },
+    stats: [
+      { label: "Year", value: "2025" },
+      { label: "Value", value: "—" },
+      { label: "Weight", value: "1" },
+    ],
+    description: "Description coming soon.",
+  },
+  {
     ...placeholder("item-51", "New Moon Raglan", "Tops"),
     model: "/menu/models/new-moon-raglan.glb",
     viewerStartAngle: { thetaDeg: 270.6, phiDeg: 99.4 },
