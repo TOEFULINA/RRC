@@ -15,7 +15,7 @@ export const BACKGROUND_IMAGE = "/menu/background.jpg";
 // one above (a nebula/constellation-map feel instead of the moodier
 // default) — set while that screen is mounted, restored on the way out.
 // Leave null to fall back to a plain placeholder space gradient (see
-// skillsView.js) until you drop a real nebula/space image in and point
+// views/skillsView-constellations.js.old) until you drop a real nebula/space image in and point
 // this at it, e.g. "/menu/hdri/nebula.jpg".
 // The -px file is the same panorama downsampled to 880px with a nearest
 // kernel and banded to 48 colours. The chunk has to be baked in: the skills
@@ -31,11 +31,14 @@ export const SKILLS_BACKGROUND_IMAGE = "/menu/images/skills-background-px.png";
 // src/views + src/router.js. Position matches the reference art:
 // SKILLS on top, ITEMS on the right, MAP on the bottom, PORTFOLIO on the left.
 export const COMPASS_DIRECTIONS = {
+  // Skills shows the About page — the constellation carousel it used to show
+  // is parked at views/skillsView-constellations.js.old. The label stays
+  // Skills because that is what the direction is called; the screen behind it
+  // is the profile.
   top: { key: "skills", label: "Skills" },
   right: { key: "items", label: "Items" },
-  // Route key stays "map" — it is wired through the router, the top nav and
-  // main.js's arrow handling. Only the label changed, because the screen is an
-  // About page now, not a map.
-  bottom: { key: "map", label: "About" },
+  // Not a route. "explore" closes the menu and drops you back into the room —
+  // see js/menu/go.js, which is what every entry point calls.
+  bottom: { key: "explore", label: "Explore" },
   left: { key: "portfolio", label: "Portfolio" },
 };

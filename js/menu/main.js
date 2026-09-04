@@ -1,11 +1,11 @@
 import { BACKGROUND_IMAGE, COMPASS_DIRECTIONS } from "./config.js";
 import { initRouter, onRouteChange, navigate, getInitialRoute, getCurrentRoute } from "./router.js";
+import { go } from "./go.js";
 import { isPauseMenuOpen } from "../pauseState.js";
 import { renderCompassHome } from "./views/compassHome.js";
 import { renderItemsView } from "./views/itemsView.js";
-import { renderSkillsView } from "./views/skillsView.js";
 import { renderPortfolioView } from "./views/portfolioView.js";
-import { renderMapView } from "./views/mapView.js";
+import { renderAboutView } from "./views/aboutView.js";
 
 // bg-layer's --bg-image isn't set here anymore - the standalone
 // compass site used a fixed BACKGROUND_IMAGE, but this ported copy
@@ -13,14 +13,16 @@ import { renderMapView } from "./views/mapView.js";
 // a live snapshot of the room each time the pause menu opens (see
 // pauseState.js's onPauseMenuChange subscriber there). Skills still
 // swaps in its own nebula backdrop and restores whatever was here
-// before, unchanged - see skillsView.js.
+// before, unchanged - that lived in the old constellation view.
 
 const routes = {
   home: renderCompassHome,
   items: renderItemsView,
-  skills: renderSkillsView,
+  // Skills IS the About page now. "map" is kept as an alias so an old
+  // #/map bookmark still lands somewhere sensible rather than on the compass.
+  skills: renderAboutView,
+  map: renderAboutView,
   portfolio: renderPortfolioView,
-  map: renderMapView,
 };
 
 const app = document.getElementById("app");
@@ -70,9 +72,8 @@ document.addEventListener("keydown", (e) => {
 
   const current = getCurrentRoute();
   if (current === "home") {
-    // Down goes to the Map like the other three go to their own screens —
-    // see compassHome.js for why it used to do something else.
-    navigate(COMPASS_DIRECTIONS[dir].key);
+    // Down is Explore, which is not a screen — go() is what knows that.
+    go(COMPASS_DIRECTIONS[dir].key);
     return;
   }
 

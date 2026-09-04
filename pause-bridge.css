@@ -166,6 +166,23 @@ body.paused #pause-open-btn {
   filter: invert(1) hue-rotate(180deg);
 }
 
+/* ---- the compass rose: actually white -------------------------------------
+   compass-rose.png is grey line art, and menu.css was also holding it at 0.92
+   opacity — so against the room it read as a grey star rather than a white
+   one. brightness(0) crushes the art to solid black, invert(1) lifts that to
+   pure white, and the glyph's own alpha is untouched, so the linework keeps
+   its exact shape.
+
+   Under .menu-inverted the invert(1) is dropped instead of added: #app's own
+   filter supplies it, and doing it twice would land back on black. */
+#pause-menu-root #app .compass-art {
+  opacity: 1;
+  filter: brightness(0) invert(1) drop-shadow(0 0 14px rgba(255, 255, 255, 0.35));
+}
+#pause-menu-root.menu-inverted #app .compass-art {
+  filter: brightness(0) drop-shadow(0 0 14px rgba(0, 0, 0, 0.35));
+}
+
 /* ---- skills constellations: white ----------------------------------------
    Same trick as the compass labels below. The stars, the connecting lines and
    the spark crosses are all fills, so one colour per inversion state covers
@@ -273,7 +290,11 @@ body.paused #pause-open-btn {
 #pause-menu-root #bg-layer {
   background-color: #2b2721;
   background-image: var(--bg-image, none);
-  filter: blur(3px);
+  /* Barely any blur, and no tint on top: the backdrop is meant to read as the
+     room you just paused, in its own colours, only softened enough that the
+     compass has something quiet to sit on. 3px was smearing it into an
+     ambient wash. */
+  filter: blur(1px);
 }
 
 /* ---- nothing scrolls except the item columns ------------------------------

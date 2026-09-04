@@ -1,5 +1,6 @@
 import { COMPASS_DIRECTIONS } from "../config.js";
 import { navigate } from "../router.js";
+import { go } from "../go.js";
 import { cameFromToefulina, goBackToReferrer } from "../utils/referrer.js";
 
 // Full compass artwork (crosshair + woven center knot) as one image —
@@ -41,12 +42,11 @@ export function renderCompassHome(container) {
   `;
 
   el.querySelectorAll("[data-route]").forEach((btn) => {
-    // All four points route now. Map used to be the odd one out twice over:
-    // an external shop link in the standalone compass site this was ported
-    // from, then a "close the menu" shortcut while there was no map to show.
-    // There is one now, so it behaves like its three neighbours. RESUME in the
-    // corner is still the way back to the room.
-    btn.addEventListener("click", () => navigate(btn.dataset.route));
+    // Three of the four are screens; the bottom one is EXPLORE, which closes
+    // the menu and puts you back in the room. go() is what tells them apart —
+    // and since the RESUME button is gone, that point is now the front door
+    // back to the walkaround.
+    btn.addEventListener("click", () => go(btn.dataset.route));
   });
 
   // Only rendered at all when the visitor actually arrived via a link from

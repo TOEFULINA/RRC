@@ -23,7 +23,7 @@ export const about = {
   logo: "/menu/about/logo-px.png",
   location: "Manhattan, NY",
 
-  // `icon` names one of the glyphs drawn in mapView.js — add a glyph there
+  // `icon` names one of the glyphs drawn in aboutView.js — add a glyph there
   // before adding a name here.
   links: [
     { icon: "doc", label: "Resume", href: "https://www.toefu888.com/_files/ugd/4ddd2b_957e41760be544e493c53f524993f088.pdf" },

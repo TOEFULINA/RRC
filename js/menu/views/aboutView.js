@@ -2,9 +2,9 @@ import { about } from "../data/about.js";
 import { renderTopNav } from "./topNav.js";
 
 // ---------------------------------------------------------------------------
-// About Me — the Map direction.
+// About Me — the Skills direction.
 //
-// This screen used to be a 3D relief of the US with the places I've lived
+// It started life as the Map direction, which was a 3D relief of the US with the places I've lived
 // marked on it. That was biography: it looked good and told a visitor nothing
 // they could hire on. The old file is kept beside this one as
 // mapView-relief.js.old if it's ever wanted back; usMap.js is untouched.
@@ -83,10 +83,10 @@ function tagBox(title, items) {
     </div>`;
 }
 
-export function renderMapView(container) {
+export function renderAboutView(container) {
   const el = document.createElement("div");
   el.className = "about-fullscreen";
-  el.appendChild(renderTopNav("map"));
+  el.appendChild(renderTopNav("skills"));
 
   const links = about.links
     .map(

@@ -1,5 +1,6 @@
 import { COMPASS_DIRECTIONS } from "../config.js";
 import { navigate } from "../router.js";
+import { go } from "../go.js";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = [
@@ -30,8 +31,9 @@ function formatGameClock(date) {
 }
 
 // Slim persistent nav shown on every section screen so you can jump
-// directly between Skills / Items / Map / Portfolio without going back
-// through the compass every time.
+// directly between Skills / Items / Portfolio without going back through the
+// compass every time. Explore is in the same row and behaves the way it does
+// on the compass — it leaves the menu.
 export function renderTopNav(activeKey) {
   const nav = document.createElement("nav");
   nav.className = "top-nav";
@@ -47,14 +49,16 @@ export function renderTopNav(activeKey) {
     const btn = document.createElement("button");
     btn.className = "rune" + (dir.key === activeKey ? " active" : "");
     btn.textContent = dir.label;
-    btn.addEventListener("click", () => navigate(dir.key));
+    btn.addEventListener("click", () => go(dir.key));
     nav.appendChild(btn);
   });
 
   // Explicit way back to the compass. The ✦ glyph at the far left of this bar
   // was always the way home, but on a phone the bar sits under the browser's
   // own toolbar and there are no arrow keys to fall back on — so this is a
-  // real, labelled button, parked next to RESUME where a back button belongs.
+  // real, labelled button. It used to sit next to RESUME; RESUME is gone (the
+  // Explore point is the way out now), so this is the only way back short of
+  // the glyph at the far left or the Escape key.
   const back = document.createElement("button");
   back.className = "rune nav-back";
   back.textContent = "Back";
