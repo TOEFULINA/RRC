@@ -450,9 +450,28 @@ function buildPlayer(parent) {
   });
 
   const wheel = el("div", "ipod-wheel", pod);
-  const prev = el("button", "ipod-btn prev", wheel); prev.textContent = "|◀◀";
-  const play = el("button", "ipod-btn play", wheel); play.textContent = "▶ ❚❚";
-  const next = el("button", "ipod-btn next", wheel); next.textContent = "▶▶|";
+  // Drawn as SVG rather than typed as characters. The transport glyphs in
+  // Unicode (U+23EE and friends) are emoji-presentation by default, so iOS was
+  // rendering them as blue rounded emoji regardless of the font stack — a
+  // variation selector fixes that on some platforms and not others. A path is
+  // a path everywhere, and it inherits the button's colour.
+  const TRANSPORT = {
+    prev: '<path d="M4 5h2.5v14H4zM20 5v14l-6.5-7zM12.5 5v14L6 12z"/>',
+    play: '<path d="M4 5v14l9.5-7zM16.5 5H19v14h-2.5zM20.5 5H23v14h-2.5z"/>',
+    next: '<path d="M17.5 5H20v14h-2.5zM4 5l6.5 7L4 19zM10.5 5l6.5 7-6.5 7z"/>',
+  };
+  const glyph = (k) =>
+    `<svg viewBox="0 0 24 24" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">${TRANSPORT[k]}</svg>`;
+
+  const prev = el("button", "ipod-btn prev", wheel);
+  prev.innerHTML = glyph("prev");
+  prev.setAttribute("aria-label", "Previous track");
+  const play = el("button", "ipod-btn play", wheel);
+  play.innerHTML = glyph("play");
+  play.setAttribute("aria-label", "Play or pause");
+  const next = el("button", "ipod-btn next", wheel);
+  next.innerHTML = glyph("next");
+  next.setAttribute("aria-label", "Next track");
   prev.addEventListener("click", () => step(-1));
   next.addEventListener("click", () => step(1));
   play.addEventListener("click", togglePlay);

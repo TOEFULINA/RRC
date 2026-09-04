@@ -304,6 +304,11 @@
   padding: 0.5rem 0.6rem;
   transition: color 0.15s ease, transform 0.08s ease;
 }
+/* The transport glyphs are inline SVG now (see stations.js) — centred, and
+   sized off the button's own type scale so they track it. */
+.ipod-btn { display: inline-flex; align-items: center; justify-content: center; }
+.ipod-btn svg { display: block; width: 1.5em; height: 1.5em; }
+.ipod-btn.play svg { width: 2em; }
 .ipod-btn:hover { color: #2b2b33; }
 .ipod-btn:active { transform: scale(0.94); }
 .ipod-btn.prev { left: 0.35rem; top: 50%; translate: 0 -50%; }
