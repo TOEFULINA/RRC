@@ -179,6 +179,18 @@ export const items = [
     description: "Description coming soon.",
   },
   {
+    ...placeholder("item-65", "JRNY Jersey", "Tops"),
+    model: "/menu/models/jrny-jersey.glb",
+    // Front-on — the JRNY script is on this face, the 04 is on the back.
+    viewerStartAngle: { thetaDeg: 270.0, phiDeg: 80.0 },
+    stats: [
+      { label: "Year", value: "2024" },
+      { label: "Value", value: "—" },
+      { label: "Weight", value: "1" },
+    ],
+    description: "Description coming soon.",
+  },
+  {
     ...placeholder("item-64", "Football Patch Jersey", "Tops"),
     model: "/menu/models/football-patch-jersey.glb",
     // Front-on — same theta correction as the jacket above.
